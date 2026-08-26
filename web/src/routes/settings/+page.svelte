@@ -3,6 +3,14 @@
 	import { api } from '$lib/api';
 	import type { WeatherConfig, WeatherLog } from '$lib/api';
 	import { showToast, settings } from '$lib/stores';
+	import { theme, THEME_MODE_LABEL, type ThemeMode } from '$lib/theme.svelte';
+	import Icon from '$lib/components/Icon.svelte';
+
+	const THEME_OPTIONS: { mode: ThemeMode; icon: string; desc: string }[] = [
+		{ mode: 'auto', icon: 'monitor', desc: '跟随系统亮暗变化' },
+		{ mode: 'light', icon: 'sun', desc: '明亮清爽的日间配色' },
+		{ mode: 'dark', icon: 'moon', desc: '柔和护眼的夜间配色' }
+	];
 
 	const WEEK = [
 		{ value: 1, label: '周一' },
@@ -138,6 +146,30 @@
 
 	<div class="card setting-card">
 		<div class="setting-head">
+			<div class="setting-title">外观</div>
+			<div class="muted">选择应用的主题外观，偏好保存在本设备。</div>
+		</div>
+		<div class="theme-options" role="radiogroup" aria-label="主题模式">
+			{#each THEME_OPTIONS as opt}
+				<button
+					class="theme-option"
+					class:on={theme.mode === opt.mode}
+					onclick={() => theme.set(opt.mode)}
+					role="radio"
+					aria-checked={theme.mode === opt.mode}
+				>
+					<span class="theme-option-icon"><Icon name={opt.icon} size={20} /></span>
+					<span class="theme-option-text">
+						<span class="theme-option-name">{THEME_MODE_LABEL[opt.mode]}</span>
+						<span class="theme-option-desc">{opt.desc}</span>
+					</span>
+				</button>
+			{/each}
+		</div>
+	</div>
+
+	<div class="card setting-card">
+		<div class="setting-head">
 			<div class="setting-title">工作日 / 休息日</div>
 			<div class="muted">系统仅在「工作日」展示当日养护任务；休息日任务顺延，不会丢失。</div>
 		</div>
@@ -263,6 +295,56 @@
 		padding: 20px;
 		margin-bottom: 16px;
 	}
+	.theme-options {
+		display: grid;
+		grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+		gap: 10px;
+	}
+	.theme-option {
+		display: flex;
+		align-items: center;
+		gap: 12px;
+		padding: 12px 14px;
+		border-radius: var(--radius-sm);
+		border: 1px solid var(--border);
+		background: var(--surface);
+		color: var(--text);
+		text-align: left;
+		transition: border-color 0.15s, background 0.15s;
+	}
+	.theme-option:hover {
+		border-color: var(--green-500);
+	}
+	.theme-option.on {
+		border-color: var(--green-600);
+		background: var(--green-50);
+	}
+	.theme-option-icon {
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		width: 38px;
+		height: 38px;
+		border-radius: 10px;
+		background: var(--green-100);
+		color: var(--green-700);
+		flex-shrink: 0;
+	}
+	.theme-option-text {
+		display: flex;
+		flex-direction: column;
+		min-width: 0;
+	}
+	.theme-option-name {
+		font-size: 14px;
+		font-weight: 600;
+		line-height: 1.4;
+	}
+	.theme-option-desc {
+		font-size: 12px;
+		color: var(--text-secondary);
+		line-height: 1.4;
+	}
 	.setting-head {
 		margin-bottom: 16px;
 	}
@@ -289,7 +371,7 @@
 	.day.on {
 		background: var(--green-600);
 		border-color: var(--green-600);
-		color: #fff;
+		color: var(--on-accent);
 	}
 	.setting-actions {
 		display: flex;
@@ -298,7 +380,7 @@
 		flex-wrap: wrap;
 	}
 	.warn {
-		color: var(--accent);
+		color: var(--warning);
 	}
 	.toggle-row {
 		display: flex;

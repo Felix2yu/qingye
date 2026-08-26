@@ -243,7 +243,7 @@
 		padding: 9px 16px; border-radius: 999px; border: 1px solid var(--border);
 		background: var(--surface); color: var(--text-secondary); cursor: pointer; font-size: 14px;
 	}
-	.tabs button.active { background: var(--green-600); color: #fff; border-color: var(--green-600); }
+	.tabs button.active { background: var(--green-600); color: var(--on-accent); border-color: var(--green-600); }
 	.card {
 		background: var(--surface); border: 1px solid var(--border); border-radius: 16px;
 		padding: 18px; margin-bottom: 16px; display: flex; flex-direction: column; gap: 12px;
@@ -251,7 +251,7 @@
 	.filelabel { font-weight: 600; display: flex; flex-direction: column; gap: 6px; }
 	.filename { font-size: 13px; color: var(--green-700); }
 	.primary {
-		align-self: flex-start; background: var(--green-600); color: #fff; border: none;
+		align-self: flex-start; background: var(--green-600); color: var(--on-accent); border: none;
 		padding: 10px 22px; border-radius: 12px; font-size: 15px; cursor: pointer;
 	}
 	.primary:disabled { opacity: 0.5; cursor: not-allowed; }
@@ -260,16 +260,16 @@
 	.hint { color: var(--green-700); }
 	.summary { font-weight: 600; display: flex; gap: 12px; align-items: center; }
 	.summary .ok { color: var(--green-600); }
-	.summary .err { color: #d9534f; }
+	.summary .err { color: var(--danger); }
 	table { width: 100%; border-collapse: collapse; font-size: 13px; }
 	th, td { text-align: left; padding: 8px 6px; border-bottom: 1px solid var(--border); vertical-align: top; }
-	.errrow { background: #fff5f5; }
+	.errrow { background: var(--err-row-bg); }
 	.content { color: var(--text-secondary); }
-	.reason { color: #b06a00; }
+	.reason { color: var(--warn-strong); }
 	.badge { padding: 2px 8px; border-radius: 999px; font-size: 12px; }
 	.badge.ok { background: var(--green-100); color: var(--green-700); }
-	.badge.warning { background: #fff3cd; color: #8a6d00; }
-	.badge.error { background: #fde2e2; color: #c0392b; }
+	.badge.warning { background: var(--warn-soft-bg); color: var(--warn-strong); }
+	.badge.error { background: var(--danger-soft); color: var(--danger-strong); }
 	select { padding: 9px 12px; border-radius: 10px; border: 1px solid var(--border); background: var(--surface); }
 	.checks { display: flex; flex-wrap: wrap; gap: 10px; }
 	.chk { display: inline-flex; align-items: center; gap: 6px; }

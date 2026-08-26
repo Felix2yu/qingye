@@ -2,9 +2,13 @@
 	import '../app.css';
 	import NavBar from '$lib/components/NavBar.svelte';
 	import { toast } from '$lib/stores';
+	import { theme } from '$lib/theme.svelte';
 	import { fly } from 'svelte/transition';
+	import { onMount } from 'svelte';
 
 	let { children } = $props();
+
+	onMount(() => theme.init());
 </script>
 
 <NavBar />
@@ -34,7 +38,7 @@
 		bottom: 90px;
 		left: 50%;
 		transform: translateX(-50%);
-		background: #33402f;
+		background: var(--toast-bg);
 		color: #fff;
 		padding: 10px 20px;
 		border-radius: 999px;

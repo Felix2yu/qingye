@@ -166,7 +166,7 @@
 	.w-strategy {
 		font-size: 12px;
 		color: var(--green-700);
-		background: #e7f4e9;
+		background: var(--accent-soft);
 		padding: 4px 10px;
 		border-radius: 999px;
 	}

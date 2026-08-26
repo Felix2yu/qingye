@@ -4,6 +4,25 @@
 		<meta charset="utf-8" />
 		<link rel="icon" href="%sveltekit.assets%/favicon.svg" type="image/svg+xml" />
 		<meta name="viewport" content="width=device-width, initial-scale=1" />
+		<script>
+			// 首屏主题预设：读取本地偏好，避免暗色用户白屏闪烁
+			(function () {
+				try {
+					var m = localStorage.getItem('qingye-theme');
+					if (m !== 'light' && m !== 'dark') m = 'auto';
+					var dark =
+						m === 'dark' ||
+						(m === 'auto' && window.matchMedia('(prefers-color-scheme: dark)').matches);
+					document.documentElement.setAttribute('data-theme', dark ? 'dark' : 'light');
+					var meta = document.createElement('meta');
+					meta.name = 'theme-color';
+					meta.content = dark ? '#141812' : '#f7f5ef';
+					document.head.appendChild(meta);
+				} catch (e) {
+					/* 忽略 */
+				}
+			})();
+		</script>
 		%sveltekit.head%
 	</head>
 	<body data-sveltekit-preload-data="hover">

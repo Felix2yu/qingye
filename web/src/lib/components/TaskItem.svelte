@@ -169,7 +169,7 @@
 	.modal-backdrop {
 		position: fixed;
 		inset: 0;
-		background: rgba(15, 23, 12, 0.45);
+		background: var(--overlay);
 		display: flex;
 		align-items: center;
 		justify-content: center;
