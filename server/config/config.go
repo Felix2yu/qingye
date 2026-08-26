@@ -15,7 +15,9 @@ type Config struct {
 	UploadDir   string   // 照片上传目录
 	CORSOrigins []string // 允许跨域的来源
 	MaxUploadMB int64    // 单张照片大小上限（MB）
-	PlantbookToken string // Plantbook API token（在线植物资料，留空则禁用在线匹配）
+	PlantbookClientID string // Plantbook OAuth2 client_id（在线植物资料，与 secret 同时配置才启用）
+	PlantbookSecret   string // Plantbook OAuth2 client_secret
+	PlantbookToken    string // 可选：直接使用的 access_token（对应官方 PLANTBOOK_ACCESS_TOKEN，调试用）
 	WebDir     string     // 前端静态构建目录（为空则只提供 API，不托管页面）
 }
 
@@ -29,8 +31,10 @@ func Load() *Config {
 		UploadDir:   getEnv("UPLOAD_DIR", "./uploads"),
 		CORSOrigins: splitCSV(getEnv("CORS_ORIGINS", "http://localhost:5173")),
 		MaxUploadMB: int64(parseInt(getEnv("MAX_UPLOAD_MB", "10"), 10)),
-		PlantbookToken: getEnv("PLANTBOOK_TOKEN", ""),
-		WebDir:         getEnv("WEB_DIR", ""),
+		PlantbookClientID: getEnv("PLANTBOOK_CLIENT_ID", ""),
+		PlantbookSecret:   getEnv("PLANTBOOK_CLIENT_SECRET", ""),
+		PlantbookToken:    getEnv("PLANTBOOK_ACCESS_TOKEN", ""),
+		WebDir:            getEnv("WEB_DIR", ""),
 	}
 }
 

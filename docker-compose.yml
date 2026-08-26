@@ -14,8 +14,10 @@ services:
       CORS_ORIGINS: "*"
       GIN_MODE: "release"
       MAX_UPLOAD_MB: "10"
-      # 可选：Plantbook 在线植物库 token（留空则禁用在线匹配）
-      PLANTBOOK_TOKEN: "${PLANTBOOK_TOKEN:-}"
+      # 可选：Plantbook 在线植物库 OAuth2 凭据（open.plantbook.io 注册获取，留空则禁用在线匹配）
+      PLANTBOOK_CLIENT_ID: "${PLANTBOOK_CLIENT_ID:-}"
+      PLANTBOOK_CLIENT_SECRET: "${PLANTBOOK_CLIENT_SECRET:-}"
+      PLANTBOOK_ACCESS_TOKEN: "${PLANTBOOK_ACCESS_TOKEN:-}"
     volumes:
       - qingye-data:/app/data
       - qingye-uploads:/app/uploads

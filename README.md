@@ -100,7 +100,7 @@ cd server && PORT=8081 CGO_ENABLED=1 go build -o qingye .
 | 今日概览 | 今日任务卡片、临近提醒、快捷入口；**休息日不展示任务，任务顺延不丢失** |
 | 照片日记 | 按植物记录照片与文字，时间线展示成长瞬间 |
 | 智能规划 | 用户设置工作日/休息日，系统仅在工作日展示当日任务 |
-| 植物资料库 | 内置 10 种本地中文养护指南；配置 `PLANTBOOK_TOKEN` 后可在线匹配并批量同步近 100 种常见室内/露台植物 |
+| 植物资料库 | 内置 10 种本地中文养护指南；配置 Plantbook OAuth2 凭据后可在线匹配并批量同步近 100 种常见室内/露台植物 |
 | 天气策略 | 集成和风天气，按实时温度/降雨自动调整浇水施肥频率并记录日志（需 `QWEATHER_KEY`） |
 | 批量导入 | CSV 批量导入植物/任务，**先预览后确认**；支持把某株植物的任务模板复制给多株植物 |
 | 设置中心 | 工作日选择器、天气策略配置、资料库同步 |
@@ -174,9 +174,12 @@ WEB_DIR=               # 前端静态构建目录；留空则只提供 API，不
 CORS_ORIGINS=http://localhost:5173
 MAX_UPLOAD_MB=10
 
-# 可选：Plantbook 在线植物库 token（open.plantbook.io 注册获取）
-# 配置后启用「在线匹配 / 批量同步」，留空则只用本地资料库
-PLANTBOOK_TOKEN=
+# 可选：Plantbook 在线植物库 OAuth2 凭据（open.plantbook.io 注册后在 API keys 生成）
+# 两个变量同时配置后启用「在线匹配 / 批量同步」，留空则只用本地资料库
+PLANTBOOK_CLIENT_ID=
+PLANTBOOK_CLIENT_SECRET=
+# 可选：直接使用的 access_token（调试用，一般无需填写）
+PLANTBOOK_ACCESS_TOKEN=
 
 # 可选：和风天气 API Key（dev.qweather.com 注册获取）
 # 配置后启用天气智能养护策略，留空则天气模块关闭
@@ -211,7 +214,7 @@ VITE_API_BASE=
 
 ## 在线植物资料库（Plantbook）
 
-配置 `PLANTBOOK_TOKEN` 后，可在线扩展资料库，无需人工录入。
+配置 `PLANTBOOK_CLIENT_ID` 与 `PLANTBOOK_CLIENT_SECRET` 后，可在线扩展资料库，无需人工录入。凭据在 [open.plantbook.io](https://open.plantbook.io) 注册后在「API keys」页生成（OAuth2 client credentials，服务端自动换取并缓存 access_token）。
 
 ### 工作原理
 
@@ -225,7 +228,7 @@ VITE_API_BASE=
 1. **录入时在线匹配**（懒加载）：添加植物时填写名称 → 点「在线查找」→ 从候选列表选一条 → 自动带回中文指南并落库。
 2. **批量同步热门植物**（离线预置）：设置页「植物资料库同步」→ 点「同步热门植物」，把内置近 100 种常见室内/露台植物的中文指南一次性拉取沉淀到本地（清单见 `server/services/library_service.go` 的 `popularSeeds`）。
 
-> 未配置 `PLANTBOOK_TOKEN` 时，在线功能优雅降级为「仅本地资料库」，不影响其他功能。
+> 未配置 Plantbook 凭据时，在线功能优雅降级为「仅本地资料库」，不影响其他功能。
 
 ---
 
@@ -274,14 +277,15 @@ plant,type,intervalDays,title,startDate
 docker compose up -d
 ```
 
-默认拉取 `ghcr.io/felix2yu/qingye:latest`。数据持久化在命名卷 `qingye-data`（SQLite）、`qingye-uploads`（照片）。可通过 `.env` 或环境变量覆盖端口、`PLANTBOOK_TOKEN`、`QWEATHER_KEY` 等。
+默认拉取 `ghcr.io/felix2yu/qingye:latest`。数据持久化在命名卷 `qingye-data`（SQLite）、`qingye-uploads`（照片）。可通过 `.env` 或环境变量覆盖端口、`PLANTBOOK_CLIENT_ID` / `PLANTBOOK_CLIENT_SECRET`、`QWEATHER_KEY` 等。
 
 ### 方式二：手动运行
 
 ```bash
 docker run -d --name qingye \
   -p 8081:8081 \
-  -e PLANTBOOK_TOKEN=你的token \
+  -e PLANTBOOK_CLIENT_ID=你的client_id \
+  -e PLANTBOOK_CLIENT_SECRET=你的client_secret \
   -e QWEATHER_KEY=你的key \
   -v qingye-data:/app/data \
   -v qingye-uploads:/app/uploads \

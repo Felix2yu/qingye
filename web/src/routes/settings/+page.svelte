@@ -275,7 +275,7 @@
 
 	<div class="card setting-card">
 		<div class="setting-title">📚 植物资料库同步</div>
-		<p class="muted">从在线植物库（Plantbook）批量拉取常见植物的中文养护指南，沉淀到本地资料库，离线可用。需配置环境变量 PLANTBOOK_TOKEN。</p>
+		<p class="muted">从在线植物库（Plantbook）批量拉取常见植物的中文养护指南，沉淀到本地资料库，离线可用。需在服务端配置环境变量 PLANTBOOK_CLIENT_ID 与 PLANTBOOK_CLIENT_SECRET（open.plantbook.io 注册获取）。</p>
 		<div class="sync-row">
 			<button class="btn btn-primary btn-sm" onclick={syncPopular} disabled={syncing}>
 				{syncing ? '同步中…' : '同步热门植物'}

@@ -69,18 +69,18 @@ func (h *LibraryHandler) ImportOnline(c *gin.Context) {
 // SyncPopular 批量同步内置热门植物到本地资料库（离线可用）
 func (h *LibraryHandler) SyncPopular(c *gin.Context) {
 	if !h.svc.OnlineEnabled() {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "未配置 Plantbook token，无法在线同步"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": "未配置 Plantbook 凭据（PLANTBOOK_CLIENT_ID / PLANTBOOK_CLIENT_SECRET），无法在线同步"})
 		return
 	}
-	added, failed, err := h.svc.SyncPopular()
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-		return
+	added, failed, firstErr := h.svc.SyncPopular()
+	msg := fmt.Sprintf("已同步 %d 种，失败 %d 种", added, failed)
+	if failed > 0 && firstErr != "" {
+		msg += fmt.Sprintf("；首个失败原因：%s", firstErr)
 	}
 	c.JSON(http.StatusOK, gin.H{
 		"added":  added,
 		"failed": failed,
 		"total":  added + failed,
-		"message": fmt.Sprintf("已同步 %d 种，失败 %d 种", added, failed),
+		"message": msg,
 	})
 }

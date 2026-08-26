@@ -1,6 +1,7 @@
 package services
 
 import (
+	"fmt"
 	"time"
 
 	"qingye/server/config"
@@ -17,7 +18,7 @@ type LibraryService struct {
 func NewLibraryService(cfg *config.Config) *LibraryService {
 	return &LibraryService{
 		repo:      repositories.NewLibraryRepo(),
-		plantbook: NewPlantbookClient(cfg.PlantbookToken),
+		plantbook: NewPlantbookClient(cfg.PlantbookClientID, cfg.PlantbookSecret, cfg.PlantbookToken),
 	}
 }
 
@@ -75,15 +76,22 @@ var popularSeeds = []string{
 
 // SyncPopular 批量同步热门植物到本地资料库（离线可用）。
 // 对每个中文名 search 取首个候选的 pid，再 detail?lang=zh 写回。
-// 已存在（同 pid）的条目会被覆盖刷新。返回同步成功/失败计数。
-func (s *LibraryService) SyncPopular() (added int, failed int, err error) {
+// 已存在（同 pid）的条目会被覆盖刷新。返回成功/失败计数与首个失败原因（便于诊断）。
+func (s *LibraryService) SyncPopular() (added int, failed int, firstErr string) {
 	if !s.plantbook.Enabled() {
-		return 0, 0, nil
+		return 0, 0, ""
 	}
-	for _, name := range popularSeeds {
+	for i, name := range popularSeeds {
+		// 轻微间隔，避免连续近 200 个请求触发服务端限流
+		if i > 0 {
+			time.Sleep(150 * time.Millisecond)
+		}
 		cands, e := s.plantbook.Search(name)
 		if e != nil {
 			failed++
+			if firstErr == "" {
+				firstErr = fmt.Sprintf("%s: %v", name, e)
+			}
 			continue
 		}
 		if len(cands) == 0 {
@@ -93,6 +101,9 @@ func (s *LibraryService) SyncPopular() (added int, failed int, err error) {
 		lib, e := s.plantbook.Detail(cands[0].PID)
 		if e != nil || lib == nil {
 			failed++
+			if firstErr == "" && e != nil {
+				firstErr = fmt.Sprintf("%s: %v", name, e)
+			}
 			continue
 		}
 		lib.SyncedAt = time.Now().Unix()
@@ -102,5 +113,5 @@ func (s *LibraryService) SyncPopular() (added int, failed int, err error) {
 		}
 		added++
 	}
-	return added, failed, nil
+	return added, failed, firstErr
 }
