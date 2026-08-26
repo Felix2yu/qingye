@@ -82,6 +82,15 @@ func setupTest(t *testing.T) *gin.Engine {
 	libH := NewLibraryHandler(&config.Config{})
 	api.GET("/library", libH.Search)
 
+	weatherH := NewWeatherHandler()
+	api.GET("/weather/config", weatherH.GetConfig)
+	api.PUT("/weather/config", weatherH.SaveConfig)
+
+	importH := NewImportHandler()
+	api.POST("/import/preview", importH.Preview)
+	api.POST("/import/confirm", importH.Confirm)
+	api.POST("/import/template-preview", importH.TemplatePreview)
+
 	return r
 }
 
@@ -406,5 +415,179 @@ func TestIntegration_RoomDeleteWithoutPlants(t *testing.T) {
 	w = perform(r, "DELETE", fmt.Sprintf("/api/rooms/%d", roomID), nil)
 	if w.Code == 200 {
 		t.Error("room with plants should not be deleted")
+	}
+}
+
+// ---- Import Preview ----
+
+func TestIntegration_ImportPreviewPlants(t *testing.T) {
+	r := setupTest(t)
+
+	// multipart form with CSV file
+	body := &bytes.Buffer{}
+	writer := multipart.NewWriter(body)
+	writer.WriteField("kind", "plants")
+	part, _ := writer.CreateFormFile("file", "plants.csv")
+	part.Write([]byte("name,species,room,note\n绿萝,Epipremnum,客厅,测试\n龟背竹,Monstera,,"))
+	writer.Close()
+
+	w := httptest.NewRecorder()
+	req, _ := http.NewRequest("POST", "/api/import/preview", body)
+	req.Header.Set("Content-Type", writer.FormDataContentType())
+	r.ServeHTTP(w, req)
+	if w.Code != 200 {
+		t.Fatalf("preview plants: %d %s", w.Code, w.Body.String())
+	}
+	resp := decodeJSON(t, w)
+	data := resp["data"].(map[string]any)
+	if data["valid"].(float64) != 2 {
+		t.Errorf("valid = %v, want 2", data["valid"])
+	}
+}
+
+func TestIntegration_ImportPreviewPlants_错误行(t *testing.T) {
+	r := setupTest(t)
+
+	body := &bytes.Buffer{}
+	writer := multipart.NewWriter(body)
+	writer.WriteField("kind", "plants")
+	part, _ := writer.CreateFormFile("file", "bad.csv")
+	part.Write([]byte("name,species\n,Epipremnum"))
+	writer.Close()
+
+	w := httptest.NewRecorder()
+	req, _ := http.NewRequest("POST", "/api/import/preview", body)
+	req.Header.Set("Content-Type", writer.FormDataContentType())
+	r.ServeHTTP(w, req)
+	if w.Code != 200 {
+		t.Fatalf("preview: %d", w.Code)
+	}
+	resp := decodeJSON(t, w)
+	data := resp["data"].(map[string]any)
+	if data["invalid"].(float64) != 1 {
+		t.Errorf("invalid = %v, want 1", data["invalid"])
+	}
+}
+
+func TestIntegration_ImportConfirmPlants(t *testing.T) {
+	r := setupTest(t)
+
+	csv := "name,species,room\n绿萝,Epipremnum,\n龟背竹,Monstera,"
+	w := perform(r, "POST", "/api/import/confirm", map[string]any{
+		"kind":    "plants",
+		"content": csv,
+	})
+	if w.Code != 200 {
+		t.Fatalf("confirm plants: %d %s", w.Code, w.Body.String())
+	}
+	resp := decodeJSON(t, w)
+	data := resp["data"].(map[string]any)
+	if data["created"].(float64) != 2 {
+		t.Errorf("created = %v, want 2", data["created"])
+	}
+}
+
+// ---- Import Template Preview ----
+
+func TestIntegration_ImportTemplatePreview(t *testing.T) {
+	r := setupTest(t)
+
+	// 先创建植物
+	w := perform(r, "POST", "/api/plants", map[string]any{"name": "Source"})
+	resp := decodeJSON(t, w)
+	sourceID := int(resp["data"].(map[string]any)["id"].(float64))
+
+	w = perform(r, "POST", "/api/plants", map[string]any{"name": "Target1"})
+	resp = decodeJSON(t, w)
+	target1 := int(resp["data"].(map[string]any)["id"].(float64))
+
+	w = perform(r, "POST", "/api/plants", map[string]any{"name": "Target2"})
+	resp = decodeJSON(t, w)
+	target2 := int(resp["data"].(map[string]any)["id"].(float64))
+
+	// 模板预览
+	w = perform(r, "POST", "/api/import/template-preview", map[string]any{
+		"sourceId":  sourceID,
+		"targetIds": []int{target1, target2},
+	})
+	// 来源无任务，应返回 warning
+	if w.Code != 200 {
+		t.Fatalf("template preview: %d %s", w.Code, w.Body.String())
+	}
+}
+
+// ---- Weather Config ----
+
+func TestIntegration_WeatherConfigCRUD(t *testing.T) {
+	r := setupTest(t)
+
+	// 获取默认配置
+	w := perform(r, "GET", "/api/weather/config", nil)
+	if w.Code != 200 {
+		t.Fatalf("get config: %d", w.Code)
+	}
+
+	// 保存配置
+	w = perform(r, "PUT", "/api/weather/config", map[string]any{
+		"city":      "北京",
+		"coldTemp":  5,
+		"hotTemp":   35,
+		"enabled":   true,
+	})
+	if w.Code != 200 {
+		t.Fatalf("save config: %d %s", w.Code, w.Body.String())
+	}
+
+	// 验证保存
+	w = perform(r, "GET", "/api/weather/config", nil)
+	if w.Code != 200 {
+		t.Fatalf("get config again: %d", w.Code)
+	}
+}
+
+// ---- Task Done & Postpone ----
+
+func TestIntegration_TaskDoneAndPostpone(t *testing.T) {
+	r := setupTest(t)
+
+	// 创建植物和任务
+	w := perform(r, "POST", "/api/plants", map[string]any{"name": "X"})
+	resp := decodeJSON(t, w)
+	plantID := int(resp["data"].(map[string]any)["id"].(float64))
+
+	w = perform(r, "POST", "/api/tasks", map[string]any{
+		"plantId":      plantID,
+		"type":         "water",
+		"intervalDays": 7,
+		"nextDue":      time.Now().Format(time.RFC3339),
+	})
+	resp = decodeJSON(t, w)
+	taskID := int(resp["data"].(map[string]any)["id"].(float64))
+
+	// 完成
+	w = perform(r, "POST", fmt.Sprintf("/api/tasks/%d/done", taskID), nil)
+	if w.Code != 200 {
+		t.Fatalf("done: %d %s", w.Code, w.Body.String())
+	}
+
+	// 推迟
+	w = perform(r, "POST", fmt.Sprintf("/api/tasks/%d/postpone", taskID), nil)
+	if w.Code != 200 {
+		t.Fatalf("postpone: %d %s", w.Code, w.Body.String())
+	}
+}
+
+// ---- Room Update ----
+
+func TestIntegration_RoomUpdate(t *testing.T) {
+	r := setupTest(t)
+
+	w := perform(r, "POST", "/api/rooms", map[string]any{"name": "客厅"})
+	resp := decodeJSON(t, w)
+	roomID := int(resp["data"].(map[string]any)["id"].(float64))
+
+	w = perform(r, "PUT", fmt.Sprintf("/api/rooms/%d", roomID), map[string]any{"name": "新客厅"})
+	if w.Code != 200 {
+		t.Fatalf("update: %d", w.Code)
 	}
 }

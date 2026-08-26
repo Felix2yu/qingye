@@ -438,3 +438,106 @@ func TestTaskLogRepo_Create_List_DeleteByTask(t *testing.T) {
 		t.Fatalf("After delete: %d", len(list))
 	}
 }
+
+// ---- TaskRepo 补充 ----
+
+func TestTaskRepo_Update(t *testing.T) {
+	setup(t)
+	plantRepo := NewPlantRepo()
+	taskRepo := NewTaskRepo()
+
+	p := &models.Plant{Name: "X"}
+	plantRepo.Create(p)
+
+	task := &models.Task{PlantID: p.ID, Type: "water", Title: "浇水", IntervalDays: 7, NextDue: time.Now(), Active: true}
+	taskRepo.Create(task)
+
+	task.Title = "新标题"
+	task.IntervalDays = 14
+	task.Active = false
+	if err := taskRepo.Update(task); err != nil {
+		t.Fatal(err)
+	}
+
+	got, _ := taskRepo.Get(task.ID)
+	if got.Title != "新标题" || got.IntervalDays != 14 || got.Active {
+		t.Errorf("after update: title=%q interval=%d active=%v", got.Title, got.IntervalDays, got.Active)
+	}
+}
+
+func TestTaskRepo_GetWithPlant(t *testing.T) {
+	setup(t)
+	plantRepo := NewPlantRepo()
+	taskRepo := NewTaskRepo()
+
+	p := &models.Plant{Name: "X"}
+	plantRepo.Create(p)
+
+	task := &models.Task{PlantID: p.ID, Type: "water", IntervalDays: 7, NextDue: time.Now(), Active: true}
+	taskRepo.Create(task)
+
+	got, err := taskRepo.GetWithPlant(task.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got.Plant.Name != "X" {
+		t.Errorf("Plant.Name = %q", got.Plant.Name)
+	}
+}
+
+func TestTaskRepo_ListActiveByPlantType(t *testing.T) {
+	setup(t)
+	plantRepo := NewPlantRepo()
+	taskRepo := NewTaskRepo()
+
+	p := &models.Plant{Name: "X"}
+	plantRepo.Create(p)
+
+	taskRepo.Create(&models.Task{PlantID: p.ID, Type: "water", IntervalDays: 7, NextDue: time.Now(), Active: true})
+	taskRepo.Create(&models.Task{PlantID: p.ID, Type: "fertilize", IntervalDays: 30, NextDue: time.Now(), Active: true})
+
+	list, _ := taskRepo.ListActiveByPlantType(p.ID, "water")
+	if len(list) != 1 {
+		t.Fatalf("ListActiveByPlantType(water) = %d, want 1", len(list))
+	}
+}
+
+func TestTaskRepo_DueBetween(t *testing.T) {
+	setup(t)
+	plantRepo := NewPlantRepo()
+	taskRepo := NewTaskRepo()
+
+	p := &models.Plant{Name: "X"}
+	plantRepo.Create(p)
+
+	soon := time.Now().Add(2 * 24 * time.Hour)
+	later := time.Now().Add(30 * 24 * time.Hour)
+	taskRepo.Create(&models.Task{PlantID: p.ID, Type: "water", IntervalDays: 7, NextDue: soon, Active: true})
+	taskRepo.Create(&models.Task{PlantID: p.ID, Type: "fertilize", IntervalDays: 30, NextDue: later, Active: true})
+
+	start := time.Now().Add(1 * 24 * time.Hour)
+	end := time.Now().Add(5 * 24 * time.Hour)
+	list, _ := taskRepo.DueBetween(start, end)
+	if len(list) != 1 {
+		t.Fatalf("DueBetween = %d, want 1", len(list))
+	}
+}
+
+func TestTaskRepo_Delete(t *testing.T) {
+	setup(t)
+	plantRepo := NewPlantRepo()
+	taskRepo := NewTaskRepo()
+
+	p := &models.Plant{Name: "X"}
+	plantRepo.Create(p)
+	task := &models.Task{PlantID: p.ID, Type: "water", IntervalDays: 7, NextDue: time.Now(), Active: true}
+	taskRepo.Create(task)
+
+	if err := taskRepo.Delete(task.ID); err != nil {
+		t.Fatal(err)
+	}
+	_, err := taskRepo.Get(task.ID)
+	if err == nil {
+		t.Error("should error after delete")
+	}
+}
