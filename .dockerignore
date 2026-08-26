@@ -1,0 +1,21 @@
+# 前端依赖与构建缓存
+web/node_modules
+web/.svelte-kit
+web/build
+# 后端本地数据/上传/编译产物
+server/data
+server/uploads
+server/qingye
+server/*.db
+# 环境文件
+**/.env
+**/.env.local
+# Git / 编辑器 / 系统
+.git
+.gitignore
+.github
+.idea
+.vscode
+**/*.md
+Dockerfile
+.dockerignore

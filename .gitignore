@@ -1,0 +1,29 @@
+# ---- 依赖 ----
+node_modules/
+web/node_modules/
+
+# ---- 前端构建产物 ----
+web/build/
+web/.svelte-kit/
+
+# ---- 运行时数据（不要入库） ----
+server/data/
+server/uploads/
+*.db
+
+# ---- 环境变量 / 密钥 ----
+.env
+.env.local
+**/.env
+**/.env.local
+
+# ---- 编译产物 ----
+/server/qingye
+qingye
+*.exe
+
+# ---- 系统 / 编辑器 ----
+.DS_Store
+.idea/
+.vscode/
+*.log
