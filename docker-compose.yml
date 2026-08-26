@@ -1,8 +1,7 @@
 services:
   qingye:
-    # 本地构建（或改用已推送的镜像：image: ghcr.io/<owner>/qingye:latest）
-    build: .
-    image: qingye:local
+    # 使用 CI 推送到 GHCR 的镜像（已含前后端，无需本地 build）
+    image: ghcr.io/felix2yu/qingye:latest
     container_name: qingye
     restart: unless-stopped
     ports:
