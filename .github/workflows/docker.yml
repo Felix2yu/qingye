@@ -4,6 +4,8 @@ on:
   push:
     branches: [main]
     tags: ['v*']
+  pull_request:
+    branches: [main]
   workflow_dispatch:
 
 permissions:
@@ -45,7 +47,8 @@ jobs:
         with:
           context: .
           platforms: ${{ matrix.platform }}
-          push: true
+          # 仅在 push 到 main/tag 时推送镜像；PR（含 Dependabot）只构建验证、不发布
+          push: ${{ github.event_name == 'push' }}
           tags: ${{ env.IMAGE }}:${{ matrix.label }}
           cache-from: type=gha,scope=${{ matrix.label }}
           cache-to: type=gha,scope=${{ matrix.label }},mode=max
