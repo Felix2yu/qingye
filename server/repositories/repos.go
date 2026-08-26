@@ -252,8 +252,8 @@ func (r *LibraryRepo) GetByPID(pid string) (*models.PlantLibrary, error) {
 // 批量同步据此跳过「已完整」的条目；缺指标的老条目会被重新拉取补齐。
 func (r *LibraryRepo) ExistingMetrics() (map[string]bool, error) {
 	type row struct {
-		PID     string
-		Metrics string
+		PID     string `gorm:"column:pid"`
+		Metrics string `gorm:"column:metrics"`
 	}
 	var rows []row
 	err := r.db.Model(&models.PlantLibrary{}).
