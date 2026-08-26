@@ -1,8 +1,6 @@
 package handlers
 
 import (
-	"net/http"
-
 	"qingye/server/models"
 	"qingye/server/services"
 
@@ -56,7 +54,7 @@ func (h *ImportHandler) Preview(c *gin.Context) {
 		BadRequest(c, err.Error())
 		return
 	}
-	c.JSON(http.StatusOK, preview)
+	OK(c, preview)
 }
 
 // Confirm 确认并落库
@@ -99,7 +97,7 @@ func (h *ImportHandler) Confirm(c *gin.Context) {
 		BadRequest(c, err.Error())
 		return
 	}
-	c.JSON(http.StatusOK, result)
+	OK(c, result)
 }
 
 // TemplatePreview 预览模板复制
@@ -118,5 +116,5 @@ func (h *ImportHandler) TemplatePreview(c *gin.Context) {
 		BadRequest(c, err.Error())
 		return
 	}
-	c.JSON(http.StatusOK, preview)
+	OK(c, preview)
 }

@@ -22,14 +22,10 @@ func NewWeatherHandler() *WeatherHandler {
 func (h *WeatherHandler) Current(c *gin.Context) {
 	cfg := h.svc.LoadConfig()
 	now := h.svc.Current()
-	c.JSON(200, gin.H{
-		"code":    0,
-		"message": "ok",
-		"data": gin.H{
-			"config":  cfg,
-			"current": now,
-			"available": services.QWeatherKeyAvailable(),
-		},
+	OK(c, gin.H{
+		"config":    cfg,
+		"current":   now,
+		"available": services.QWeatherKeyAvailable(),
 	})
 }
 

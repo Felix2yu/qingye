@@ -25,21 +25,21 @@ func (h *LibraryHandler) Search(c *gin.Context) {
 	keyword := c.Query("keyword")
 	list, err := h.svc.Search(keyword)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		ServerError(c, err.Error())
 		return
 	}
-	c.JSON(http.StatusOK, gin.H{"list": list})
+	OK(c, list)
 }
 
-// SearchOnline 在线搜索候选（Plantbook）；未配置 token 时返回 enabled=false
+// SearchOnline 在线搜索候选（Plantbook）；未配置凭据时返回 enabled=false
 func (h *LibraryHandler) SearchOnline(c *gin.Context) {
 	keyword := strings.TrimSpace(c.Query("keyword"))
 	cands, err := h.svc.SearchOnline(keyword)
 	if err != nil {
-		c.JSON(http.StatusBadGateway, gin.H{"error": err.Error()})
+		Fail(c, http.StatusBadGateway, http.StatusBadGateway, err.Error())
 		return
 	}
-	c.JSON(http.StatusOK, gin.H{
+	OK(c, gin.H{
 		"enabled": h.svc.OnlineEnabled(),
 		"list":    cands,
 	})
@@ -51,25 +51,25 @@ func (h *LibraryHandler) ImportOnline(c *gin.Context) {
 		PID string `json:"pid"`
 	}
 	if err := c.ShouldBindJSON(&body); err != nil || body.PID == "" {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "缺少 pid"})
+		BadRequest(c, "缺少 pid")
 		return
 	}
 	lib, err := h.svc.ImportOnline(body.PID)
 	if err != nil {
-		c.JSON(http.StatusBadGateway, gin.H{"error": err.Error()})
+		Fail(c, http.StatusBadGateway, http.StatusBadGateway, err.Error())
 		return
 	}
 	if lib == nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "未找到该植物"})
+		NotFound(c, "未找到该植物")
 		return
 	}
-	c.JSON(http.StatusOK, lib)
+	OK(c, lib)
 }
 
 // SyncPopular 批量同步内置热门植物到本地资料库（离线可用）
 func (h *LibraryHandler) SyncPopular(c *gin.Context) {
 	if !h.svc.OnlineEnabled() {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "未配置 Plantbook 凭据（PLANTBOOK_CLIENT_ID / PLANTBOOK_CLIENT_SECRET），无法在线同步"})
+		BadRequest(c, "未配置 Plantbook 凭据（PLANTBOOK_CLIENT_ID / PLANTBOOK_CLIENT_SECRET），无法在线同步")
 		return
 	}
 	added, failed, firstErr := h.svc.SyncPopular()
@@ -77,10 +77,10 @@ func (h *LibraryHandler) SyncPopular(c *gin.Context) {
 	if failed > 0 && firstErr != "" {
 		msg += fmt.Sprintf("；首个失败原因：%s", firstErr)
 	}
-	c.JSON(http.StatusOK, gin.H{
-		"added":  added,
-		"failed": failed,
-		"total":  added + failed,
+	OK(c, gin.H{
+		"added":   added,
+		"failed":  failed,
+		"total":   added + failed,
 		"message": msg,
 	})
 }
