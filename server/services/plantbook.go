@@ -183,11 +183,11 @@ func (d *pbDetail) careInfo() pbCare {
 		Pruning:       d.Pruning,
 	}
 	if d.Care != nil {
-		c.Light = firstNonEmpty(c.Light, d.Care.Light, d.Care.Sunlight)
-		c.Watering = firstNonEmpty(c.Watering, d.Care.Watering)
-		c.Soil = firstNonEmpty(c.Soil, d.Care.Soil)
-		c.Fertilization = firstNonEmpty(c.Fertilization, d.Care.Fertilization)
-		c.Pruning = firstNonEmpty(c.Pruning, d.Care.Pruning)
+		c.Light = firstNonEmpty(d.Care.Light, d.Care.Sunlight, c.Light)
+		c.Watering = firstNonEmpty(d.Care.Watering, c.Watering)
+		c.Soil = firstNonEmpty(d.Care.Soil, c.Soil)
+		c.Fertilization = firstNonEmpty(d.Care.Fertilization, c.Fertilization)
+		c.Pruning = firstNonEmpty(d.Care.Pruning, c.Pruning)
 	}
 	return c
 }

@@ -1,0 +1,60 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  go-test:
+    name: Go Tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.25'
+
+      - name: Install CGO dependencies
+        run: sudo apt-get update && sudo apt-get install -y gcc
+
+      - name: Download dependencies
+        run: go mod download
+        working-directory: server
+
+      - name: Run tests with coverage
+        run: go test -v -race -coverprofile=coverage.out -covermode=atomic ./...
+        working-directory: server
+
+      - name: Upload Go coverage to Codecov
+        uses: codecov/codecov-action@v5
+        with:
+          files: server/coverage.out
+          flags: go
+          fail_ci_if_error: false
+
+  web-check:
+    name: Web Check & Test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+          cache-dependency-path: web/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+        working-directory: web
+
+      - name: Type check
+        run: npm run check
+        working-directory: web
+
+      - name: Run tests
+        run: npm run test
+        working-directory: web

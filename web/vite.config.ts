@@ -1,6 +1,6 @@
 import { sveltekit } from '@sveltejs/kit/vite';
 import { SvelteKitPWA } from '@vite-pwa/sveltekit';
-import { defineConfig } from 'vite';
+import { defineConfig } from 'vitest/config';
 
 export default defineConfig({
 	plugins: [
@@ -36,5 +36,9 @@ export default defineConfig({
 			'/api': { target: 'http://127.0.0.1:8081', changeOrigin: true },
 			'/uploads': { target: 'http://127.0.0.1:8081', changeOrigin: true }
 		}
+	},
+	test: {
+		include: ['src/**/*.{test,spec}.ts'],
+		environment: 'node'
 	}
 });
