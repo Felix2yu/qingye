@@ -53,44 +53,30 @@ func (s *LibraryService) ImportOnline(pid string) (*models.PlantLibrary, error) 
 	return s.repo.GetByPID(pid)
 }
 
-// popularSeeds 内置中文名清单（常见室内/露台植物），用于离线批量预置。
-// Plantbook 的 common_names 含多语言，用中文名可直接 search 命中。
-var popularSeeds = []string{
-	// 常见室内观叶
-	"绿萝", "龟背竹", "虎皮兰", "琴叶榕", "吊兰", "多肉植物", "薄荷", "富贵竹",
-	"散尾葵", "鹅掌柴", "仙人掌", "芦荟", "文竹", "橡皮树", "发财树", "君子兰",
-	"常春藤", "铜钱草", "金钻", "白掌", "红掌", "铁线蕨", "波士顿蕨", "沙漠玫瑰",
-	"龙骨", "玉树", "金钱树", "平安树", "鸭脚木", "万年青", "一叶兰", "竹芋",
-	"春羽", "天堂鸟", "鹤望兰", "袖珍椰子", "棕竹", "网纹草", "空气凤梨",
-	"量天尺", "金琥", "虹之玉", "熊童子", "玉露", "生石花", "仙人球", "龙舌兰",
-	// 室内开花
-	"蝴蝶兰", "长寿花", "非洲菊", "仙客来", "蟹爪兰", "丽格海棠", "茶花", "兰花",
-	"石斛兰", "文心兰", "大花蕙兰", "三角梅", "龙吐珠", "天竺葵",
-	// 露台 / 阳台常见
-	"月季", "茉莉", "栀子花", "绣球", "玫瑰", "薰衣草", "迷迭香",
-	"罗勒", "百里香", "紫苏", "香菜", "小番茄", "辣椒", "草莓", "蓝莓",
-	"葡萄", "无花果", "石榴", "金桔", "柠檬", "桂花", "紫藤", "凌霄",
-	"牵牛花", "太阳花", "矮牵牛", "玛格丽特", "菊花",
-	"铁线莲", "金银花", "睡莲", "荷花", "碗莲", "一叶莲",
-}
-
-// SyncPopular 批量同步热门植物到本地资料库（离线可用）。
-// 对每个中文名 search 取首个候选的 pid，再 detail?lang=zh 写回。
-// 已存在（同 pid）的条目会被覆盖刷新。返回成功/失败计数与首个失败原因（便于诊断）。
+// SyncPopular 批量同步映射表内全部植物到本地资料库（离线可用）。
+// 对每个学名 search 取首个候选的 pid，再 detail?lang=zh 写回；
+// 详情缺少中文 common name 时以表中中文名作为展示名。
+// 已存在（同 pid）的条目会被覆盖刷新。返回成功/失败计数与首个失败原因。
+// 注意：全表数百条 × (search+detail+间隔)，耗时数分钟，属长任务。
 func (s *LibraryService) SyncPopular() (added int, failed int, firstErr string) {
 	if !s.plantbook.Enabled() {
 		return 0, 0, ""
 	}
-	for i, name := range popularSeeds {
-		// 轻微间隔，避免连续近 200 个请求触发服务端限流
+	seen := map[string]bool{} // 别名可能指向同一学名，去重避免重复请求
+	for i, seed := range plantAliases {
+		if seen[seed.Latin] {
+			continue
+		}
+		seen[seed.Latin] = true
+		// 轻微间隔，避免连续数百个请求触发服务端限流
 		if i > 0 {
 			time.Sleep(150 * time.Millisecond)
 		}
-		cands, e := s.plantbook.Search(name)
+		cands, e := s.plantbook.Search(seed.Latin)
 		if e != nil {
 			failed++
 			if firstErr == "" {
-				firstErr = fmt.Sprintf("%s: %v", name, e)
+				firstErr = fmt.Sprintf("%s(%s): %v", seed.Zh, seed.Latin, e)
 			}
 			continue
 		}
@@ -102,9 +88,13 @@ func (s *LibraryService) SyncPopular() (added int, failed int, firstErr string) 
 		if e != nil || lib == nil {
 			failed++
 			if firstErr == "" && e != nil {
-				firstErr = fmt.Sprintf("%s: %v", name, e)
+				firstErr = fmt.Sprintf("%s(%s): %v", seed.Zh, seed.Latin, e)
 			}
 			continue
+		}
+		// 展示名兜底：详情未带中文 common name 时使用表中中文名
+		if lib.Name != "" && !isChinese(lib.Name) && isChinese(seed.Zh) {
+			lib.Name = seed.Zh
 		}
 		lib.SyncedAt = time.Now().Unix()
 		if e := s.repo.UpsertByPID(lib); e != nil {

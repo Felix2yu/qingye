@@ -9,6 +9,7 @@ import (
 	"strings"
 	"sync"
 	"time"
+	"unicode/utf8"
 
 	"qingye/server/models"
 )
@@ -148,14 +149,21 @@ type OnlineCandidate struct {
 	CommonNames []string `json:"commonNames"` // 所有常见名（含中文）
 }
 
-// Search 按关键词搜索植物（2025-09 起 Plantbook 搜索支持多语言 common names，
-// 中文名可直接命中）。keyword 长度需 >= 2；未配置凭据时返回空列表。
+// Search 按关键词搜索植物。服务端要求关键词至少 3 个字符，且库内中文
+// common name 覆盖极低；因此中文关键词先经本地映射表（plant_alias.go）
+// 转换为拉丁学名再查询，未命中映射且长度不足时返回空列表。
 func (p *PlantbookClient) Search(keyword string) ([]OnlineCandidate, error) {
-	if !p.Enabled() || len(strings.TrimSpace(keyword)) < 2 {
+	kw := strings.TrimSpace(keyword)
+	if !p.Enabled() {
+		return nil, nil
+	}
+	if latin, hit := lookupLatin(kw); hit {
+		kw = latin
+	} else if utf8.RuneCountInString(kw) < 3 {
 		return nil, nil
 	}
 	u := fmt.Sprintf("%s/plant/search?alias=%s&limit=20",
-		plantbookBaseURL, url.QueryEscape(keyword))
+		plantbookBaseURL, url.QueryEscape(kw))
 	body, err := p.doGet(u)
 	if err != nil {
 		return nil, err
