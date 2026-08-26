@@ -3,6 +3,7 @@ package handlers
 import (
 	"fmt"
 	"net/http"
+	"strconv"
 	"strings"
 
 	"qingye/server/config"
@@ -67,20 +68,39 @@ func (h *LibraryHandler) ImportOnline(c *gin.Context) {
 }
 
 // SyncPopular 批量同步内置热门植物到本地资料库（离线可用）
+// ?limit=N 每轮最多检索的新条目数（默认 30）
 func (h *LibraryHandler) SyncPopular(c *gin.Context) {
 	if !h.svc.OnlineEnabled() {
 		BadRequest(c, "未配置 Plantbook 凭据（PLANTBOOK_CLIENT_ID / PLANTBOOK_CLIENT_SECRET），无法在线同步")
 		return
 	}
-	added, failed, firstErr := h.svc.SyncPopular()
-	msg := fmt.Sprintf("已同步 %d 种，失败 %d 种", added, failed)
-	if failed > 0 && firstErr != "" {
-		msg += fmt.Sprintf("；首个失败原因：%s", firstErr)
+	limit, _ := strconv.Atoi(c.DefaultQuery("limit", "30"))
+	if limit <= 0 || limit > 200 {
+		limit = 30
+	}
+	added, failed, skipped, remaining, firstErr, throttled := h.svc.SyncPopular(limit)
+
+	msg := fmt.Sprintf("本轮新增 %d 种，失败 %d 种", added, failed)
+	if skipped > 0 {
+		msg += fmt.Sprintf("，跳过 %d 种（本地已存在）", skipped)
+	}
+	switch {
+	case throttled != nil:
+		msg += fmt.Sprintf("；%s。稍后再次同步可从断点继续", throttled.Error())
+	case firstErr != "":
+		msg += fmt.Sprintf("；已停止：%s", firstErr)
+	case remaining > 0:
+		msg += fmt.Sprintf("。还有 %d 种待同步，稍后再次点击继续", remaining)
+	default:
+		msg += "。全部条目已处理完毕 🌿"
 	}
 	OK(c, gin.H{
-		"added":   added,
-		"failed":  failed,
-		"total":   added + failed,
-		"message": msg,
+		"added":     added,
+		"failed":    failed,
+		"skipped":   skipped,
+		"remaining": remaining,
+		"total":     added + failed + skipped + remaining,
+		"throttled": throttled != nil,
+		"message":   msg,
 	})
 }

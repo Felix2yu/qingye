@@ -248,6 +248,26 @@ func (r *LibraryRepo) GetByPID(pid string) (*models.PlantLibrary, error) {
 	return &lib, nil
 }
 
+// ExistingMetrics 本地已同步条目：pid → 是否已含结构化指标。
+// 批量同步据此跳过「已完整」的条目；缺指标的老条目会被重新拉取补齐。
+func (r *LibraryRepo) ExistingMetrics() (map[string]bool, error) {
+	type row struct {
+		PID     string
+		Metrics string
+	}
+	var rows []row
+	err := r.db.Model(&models.PlantLibrary{}).
+		Select("pid", "metrics").Where("pid <> ''").Find(&rows).Error
+	if err != nil {
+		return nil, err
+	}
+	set := make(map[string]bool, len(rows))
+	for _, p := range rows {
+		set[p.PID] = p.Metrics != ""
+	}
+	return set, nil
+}
+
 // UpsertByPID 以 pid 为唯一键写入/更新资料库条目（在线同步后沉淀为本地缓存）
 func (r *LibraryRepo) UpsertByPID(lib *models.PlantLibrary) error {
 	var existing models.PlantLibrary
@@ -260,11 +280,17 @@ func (r *LibraryRepo) UpsertByPID(lib *models.PlantLibrary) error {
 	}
 	lib.ID = existing.ID
 	return r.db.Model(&existing).Updates(map[string]any{
-		"name":      lib.Name,
-		"alias":     lib.Alias,
-		"guide":     lib.Guide,
-		"image":     lib.Image,
-		"synced_at": lib.SyncedAt,
+		"name":         lib.Name,
+		"display_pid":  lib.DisplayPID,
+		"alias":        lib.Alias,
+		"category":     lib.Category,
+		"origin":       lib.Origin,
+		"common_names": lib.CommonNames,
+		"guide":        lib.Guide,
+		"metrics":      lib.Metrics,
+		"image":        lib.Image,
+		"link":         lib.Link,
+		"synced_at":    lib.SyncedAt,
 	}).Error
 }
 

@@ -275,7 +275,10 @@
 
 	<div class="card setting-card">
 		<div class="setting-title">📚 植物资料库同步</div>
-		<p class="muted">从在线植物库（Plantbook）批量拉取常见植物的中文养护指南，沉淀到本地资料库，离线可用。需在服务端配置环境变量 PLANTBOOK_CLIENT_ID 与 PLANTBOOK_CLIENT_SECRET（open.plantbook.io 注册获取）。</p>
+		<p class="muted">
+			从在线植物库（Plantbook）批量拉取常见植物的中文养护指南，沉淀到本地资料库，离线可用。需在服务端配置环境变量 PLANTBOOK_CLIENT_ID 与 PLANTBOOK_CLIENT_SECRET（open.plantbook.io 注册获取）。
+			免费账户有每日请求配额：每轮最多同步约 30 种，遇到错误自动停止；已入库条目不再请求，多次点击即可逐步补齐全表。
+		</p>
 		<div class="sync-row">
 			<button class="btn btn-primary btn-sm" onclick={syncPopular} disabled={syncing}>
 				{syncing ? '同步中…' : '同步热门植物'}

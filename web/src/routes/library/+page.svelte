@@ -3,11 +3,15 @@
 	import { api } from '$lib/api';
 	import type { PlantLibrary } from '$lib/api';
 	import { showToast } from '$lib/stores';
+	import { zhCategory, zhOrigin } from '$lib/plant-zh';
 
 	let list = $state<PlantLibrary[]>([]);
 	let keyword = $state('');
 	let loading = $state(true);
 	let showDetail = $state<PlantLibrary | null>(null);
+
+	// 当前详情条目的全部常见名
+	const detailNames = $derived(showDetail ? commonNames(showDetail) : []);
 
 	async function search(q = '') {
 		loading = true;
@@ -24,6 +28,60 @@
 	function onInput() {
 		clearTimeout(timer);
 		timer = setTimeout(() => search(keyword.trim()), 250);
+	}
+
+	// ---- 结构化环境阈值（Plantbook 同步条目携带）----
+	interface Metrics {
+		minLightMmol?: number;
+		maxLightMmol?: number;
+		minLightLux?: number;
+		maxLightLux?: number;
+		minTemp?: number;
+		maxTemp?: number;
+		minEnvHumid?: number;
+		maxEnvHumid?: number;
+		minSoilMoist?: number;
+		maxSoilMoist?: number;
+		minSoilEc?: number;
+		maxSoilEc?: number;
+	}
+
+	function parseMetrics(raw?: string): Metrics | null {
+		if (!raw) return null;
+		try {
+			return JSON.parse(raw) as Metrics;
+		} catch {
+			return null;
+		}
+	}
+
+	const range = (a?: number, b?: number, unit = '') =>
+		a || b ? `${a ?? '–'} ~ ${b ?? '–'}${unit}` : '';
+
+	// 生成指标展示行（仅列出有数据的项）
+	function metricRows(p: PlantLibrary): [string, string][] {
+		const m = parseMetrics(p.metrics);
+		if (!m) return [];
+		const rows: [string, string][] = [];
+		const add = (label: string, v: string) => v && rows.push([label, v]);
+		add('光照 PPFD', range(m.minLightMmol, m.maxLightMmol, ' μmol/㎡·s'));
+		add('光照照度', range(m.minLightLux, m.maxLightLux, ' lx'));
+		add('温度', range(m.minTemp, m.maxTemp, ' ℃'));
+		add('空气湿度', range(m.minEnvHumid, m.maxEnvHumid, ' %'));
+		add('土壤水分', range(m.minSoilMoist, m.maxSoilMoist, ' %'));
+		add('土壤 EC', range(m.minSoilEc, m.maxSoilEc, ' µS/cm'));
+		return rows;
+	}
+
+	// 解析常见名 JSON 数组
+	function commonNames(p: PlantLibrary): string[] {
+		if (!p.commonNames) return [];
+		try {
+			const arr = JSON.parse(p.commonNames);
+			return Array.isArray(arr) ? arr.filter((x) => typeof x === 'string' && x.trim()) : [];
+		} catch {
+			return [];
+		}
 	}
 
 	onMount(() => search(''));
@@ -60,9 +118,39 @@
 	<div class="modal-backdrop" onclick={() => (showDetail = null)}>
 		<div class="modal" onclick={(e) => e.stopPropagation()}>
 			<div class="modal-title">{showDetail.name}</div>
-			{#if showDetail.alias}<p class="muted" style="margin-bottom:12px">别名：{showDetail.alias}</p>{/if}
+			<p class="muted meta-line">
+				{#if showDetail.displayPid || showDetail.alias}
+					<span title={showDetail.alias}>{showDetail.displayPid || showDetail.alias}</span>
+				{/if}
+				{#if showDetail.category}
+					<span title={showDetail.category}>· {zhCategory(showDetail.category)}</span>
+				{/if}
+				{#if showDetail.origin}
+					<span title={showDetail.origin}>· 原产 {zhOrigin(showDetail.origin)}</span>
+				{/if}
+			</p>
+
+			<div class="metrics">
+				{#each metricRows(showDetail) as [label, value]}
+					<div class="metric">
+						<span class="metric-label">{label}</span>
+						<span class="metric-value">{value}</span>
+					</div>
+				{/each}
+			</div>
+
 			<p class="guide-text">{showDetail.guide}</p>
+
+			{#if detailNames.length > 0}
+				<p class="muted cn-line">常见名：{detailNames.join('、')}</p>
+			{/if}
+
 			<div class="modal-actions">
+				{#if showDetail.link}
+					<a class="btn btn-ghost" href={showDetail.link} target="_blank" rel="noopener noreferrer">
+						Plantbook 页面 ↗
+					</a>
+				{/if}
 				<button class="btn btn-primary" onclick={() => (showDetail = null)}>知道了</button>
 			</div>
 		</div>
@@ -100,5 +188,41 @@
 	.guide-text {
 		line-height: 1.8;
 		color: var(--text);
+	}
+	.meta-line {
+		display: flex;
+		gap: 6px;
+		flex-wrap: wrap;
+		margin-bottom: 12px;
+		font-style: italic;
+	}
+	.cn-line {
+		margin-top: 14px;
+		padding-top: 10px;
+		border-top: 1px dashed var(--border);
+	}
+	.metrics {
+		display: grid;
+		grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+		gap: 8px;
+		margin-bottom: 14px;
+	}
+	.metric {
+		display: flex;
+		flex-direction: column;
+		gap: 2px;
+		background: var(--green-50);
+		border-radius: 10px;
+		padding: 8px 12px;
+	}
+	.metric-label {
+		font-size: 11px;
+		color: var(--text-secondary);
+	}
+	.metric-value {
+		font-size: 13px;
+		font-weight: 600;
+		color: var(--green-700);
+		font-variant-numeric: tabular-nums;
 	}
 </style>

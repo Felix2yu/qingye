@@ -458,6 +458,19 @@
 {/if}
 
 <style>
+	.head {
+		display: flex;
+		align-items: flex-end;
+		justify-content: space-between;
+		gap: 12px;
+		flex-wrap: wrap;
+		margin-bottom: 18px;
+	}
+	.head-actions {
+		display: flex;
+		gap: 8px;
+		flex-shrink: 0;
+	}
 	.room-mgr {
 		max-width: 560px;
 	}

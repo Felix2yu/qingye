@@ -6,6 +6,8 @@ import (
 	"io"
 	"net/http"
 	"net/url"
+	"regexp"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -123,21 +125,98 @@ type pbCommonName struct {
 	LanguageCode string `json:"language_code"`
 }
 
-// pbDetail Plantbook 植物详情（仅取本应用需要的字段）
+// pbDetail Plantbook 植物详情。
+// 注意：环境阈值为基础字段；养护描述（光照/浇水/土壤/施肥/修剪）属可选
+// care 类别，请求必须带 ?include=care 才会返回。
 type pbDetail struct {
 	PID           string         `json:"pid"`
+	DisplayPID    string         `json:"display_pid"`
 	Alias         string         `json:"alias"`
-	CommonNames   []pbCommonName `json:"common_names"`
-	ImageURL      string         `json:"image_url"`
+	Category      string         `json:"category"`
+	Origin        string         `json:"origin"`
 	Link          string         `json:"link"`
-	Watering      string         `json:"watering"`
+	ImageURL      string         `json:"image_url"`
+	CommonNames   []pbCommonName `json:"common_names"`
 	MaxTemp       float64        `json:"max_temp"`
 	MinTemp       float64        `json:"min_temp"`
+	MaxLightMMOL  float64        `json:"max_light_mmol"`
+	MinLightMMOL  float64        `json:"min_light_mmol"`
+	MaxLightLux   float64        `json:"max_light_lux"`
+	MinLightLux   float64        `json:"min_light_lux"`
+	MaxEnvHumid   float64        `json:"max_env_humid"`
+	MinEnvHumid   float64        `json:"min_env_humid"`
+	MaxSoilMoist  float64        `json:"max_soil_moist"`
+	MinSoilMoist  float64        `json:"min_soil_moist"`
+	MaxSoilEC     float64        `json:"max_soil_ec"`
+	MinSoilEC     float64        `json:"min_soil_ec"`
 	MaxLight      string         `json:"max_light_human"`
 	MinLight      string         `json:"min_light_human"`
-	Fertilization string         `json:"fertilization"`
-	Pruning       string         `json:"pruning"`
-	Soil          []string       `json:"soil"`
+
+	// 养护信息：官方文档未给出明确嵌套层级，这里同时兼容
+	// 「平铺在顶层」与「嵌套在 care 对象内」两种形态
+	Light         string  `json:"light"`
+	Sunlight      string  `json:"sunlight"`
+	Watering      string  `json:"watering"`
+	SoilText      string  `json:"soil"`
+	Fertilization string  `json:"fertilization"`
+	Pruning       string  `json:"pruning"`
+	Care          *pbCare `json:"care"`
+}
+
+// pbCare care 类别的养护信息
+type pbCare struct {
+	Light         string `json:"light"`
+	Sunlight      string `json:"sunlight"`
+	Watering      string `json:"watering"`
+	Soil          string `json:"soil"`
+	Fertilization string `json:"fertilization"`
+	Pruning       string `json:"pruning"`
+}
+
+// careInfo 归一化养护信息：平铺字段与 care 嵌套对象取并集（非空优先）
+func (d *pbDetail) careInfo() pbCare {
+	c := pbCare{
+		Light:         firstNonEmpty(d.Light, d.Sunlight),
+		Watering:      d.Watering,
+		Soil:          d.SoilText,
+		Fertilization: d.Fertilization,
+		Pruning:       d.Pruning,
+	}
+	if d.Care != nil {
+		c.Light = firstNonEmpty(c.Light, d.Care.Light, d.Care.Sunlight)
+		c.Watering = firstNonEmpty(c.Watering, d.Care.Watering)
+		c.Soil = firstNonEmpty(c.Soil, d.Care.Soil)
+		c.Fertilization = firstNonEmpty(c.Fertilization, d.Care.Fertilization)
+		c.Pruning = firstNonEmpty(c.Pruning, d.Care.Pruning)
+	}
+	return c
+}
+
+func firstNonEmpty(vals ...string) string {
+	for _, v := range vals {
+		if strings.TrimSpace(v) != "" {
+			return strings.TrimSpace(v)
+		}
+	}
+	return ""
+}
+
+// PlantMetrics 结构化环境阈值（存入 PlantLibrary.Metrics 的 JSON 形态），
+// 单位：光照 mmol(µmol/m²·s) 与 lux、温度 ℃、湿度与土壤水分 %、EC µS/cm。
+// 可供后续智能养护策略直接使用，无需再解析文本指南。
+type PlantMetrics struct {
+	MinLightMMOL float64 `json:"minLightMmol,omitempty"`
+	MaxLightMMOL float64 `json:"maxLightMmol,omitempty"`
+	MinLightLux  float64 `json:"minLightLux,omitempty"`
+	MaxLightLux  float64 `json:"maxLightLux,omitempty"`
+	MinTemp      float64 `json:"minTemp,omitempty"`
+	MaxTemp      float64 `json:"maxTemp,omitempty"`
+	MinEnvHumid  float64 `json:"minEnvHumid,omitempty"`
+	MaxEnvHumid  float64 `json:"maxEnvHumid,omitempty"`
+	MinSoilMoist float64 `json:"minSoilMoist,omitempty"`
+	MaxSoilMoist float64 `json:"maxSoilMoist,omitempty"`
+	MinSoilEC    float64 `json:"minSoilEc,omitempty"`
+	MaxSoilEC    float64 `json:"maxSoilEc,omitempty"`
 }
 
 // OnlineCandidate 在线搜索返回的候选条目（供前端展示让用户选择）
@@ -184,7 +263,7 @@ func (p *PlantbookClient) Detail(pid string) (*models.PlantLibrary, error) {
 	if !p.Enabled() || pid == "" {
 		return nil, nil
 	}
-	u := fmt.Sprintf("%s/plant/detail/%s/?lang=zh", plantbookBaseURL, url.PathEscape(pid))
+	u := fmt.Sprintf("%s/plant/detail/%s/?lang=zh&include=care", plantbookBaseURL, url.PathEscape(pid))
 	body, err := p.doGet(u)
 	if err != nil {
 		return nil, err
@@ -194,6 +273,58 @@ func (p *PlantbookClient) Detail(pid string) (*models.PlantLibrary, error) {
 		return nil, fmt.Errorf("解析详情响应失败: %w", err)
 	}
 	return detailToLibrary(d), nil
+}
+
+// ThrottledError Plantbook 限流（HTTP 429）。免费账户按天配额，
+// 触发后需等待服务端提示的时长（通常到次日重置）。
+type ThrottledError struct {
+	RetryAfter time.Duration // 服务端建议的等待时长；0 表示未知
+}
+
+func (e *ThrottledError) Error() string {
+	if e.RetryAfter > 0 {
+		return fmt.Sprintf("触发 Plantbook 限流，约 %s 后恢复", formatDuration(e.RetryAfter))
+	}
+	return "触发 Plantbook 限流"
+}
+
+// IsThrottled 判断错误是否为限流类错误
+func IsThrottled(e error) bool {
+	_, ok := e.(*ThrottledError)
+	return ok
+}
+
+// formatDuration 把秒数转成中文可读时长
+func formatDuration(d time.Duration) string {
+	mins := int(d.Minutes())
+	if mins >= 60 {
+		h := mins / 60
+		m := mins % 60
+		if m > 0 {
+			return fmt.Sprintf("%d 小时 %d 分钟", h, m)
+		}
+		return fmt.Sprintf("%d 小时", h)
+	}
+	if mins > 0 {
+		return fmt.Sprintf("%d 分钟", mins)
+	}
+	return fmt.Sprintf("%d 秒", int(d.Seconds()))
+}
+
+// parseThrottle 解析 429 响应：优先 Retry-After 头，否则从响应体
+// 「Expected available in N seconds」提取等待秒数。
+var throttleRe = regexp.MustCompile(`available in (\d+) seconds`)
+
+func parseThrottle(retryAfterHeader, body string) *ThrottledError {
+	var secs int
+	if n, err := strconv.Atoi(strings.TrimSpace(retryAfterHeader)); err == nil && n > 0 {
+		secs = n
+	} else if m := throttleRe.FindStringSubmatch(body); m != nil {
+		if n, err := strconv.Atoi(m[1]); err == nil {
+			secs = n
+		}
+	}
+	return &ThrottledError{RetryAfter: time.Duration(secs) * time.Second}
 }
 
 // doGet 带 Bearer access_token 的 GET 请求；401 时刷新凭据重试一次
@@ -231,6 +362,9 @@ func (p *PlantbookClient) tryGet(rawURL string) ([]byte, error) {
 	data, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return nil, err
+	}
+	if resp.StatusCode == http.StatusTooManyRequests {
+		return nil, parseThrottle(resp.Header.Get("Retry-After"), string(data))
 	}
 	if resp.StatusCode != http.StatusOK {
 		msg := strings.TrimSpace(string(data))
@@ -299,7 +433,7 @@ func isChinese(s string) bool {
 	return false
 }
 
-// detailToLibrary 将 Plantbook 详情映射为中文 PlantLibrary（三段式 Guide）
+// detailToLibrary 将 Plantbook 详情映射为中文 PlantLibrary（三段式 Guide + 结构化指标）
 func detailToLibrary(d pbDetail) *models.PlantLibrary {
 	zh := ""
 	for _, c := range d.CommonNames {
@@ -313,34 +447,91 @@ func detailToLibrary(d pbDetail) *models.PlantLibrary {
 		name = d.Alias
 	}
 	guide := buildGuide(d)
-	return &models.PlantLibrary{
-		PID:   d.PID,
-		Name:  name,
-		Alias: d.Alias,
-		Guide: guide,
-		Image: d.ImageURL,
+	lib := &models.PlantLibrary{
+		PID:        d.PID,
+		DisplayPID: d.DisplayPID,
+		Name:       name,
+		Alias:      d.Alias,
+		Category:   d.Category,
+		Origin:     d.Origin,
+		Guide:      guide,
+		Image:      d.ImageURL,
+		Link:       d.Link,
 	}
+	// 全部常见名序列化存储（JSON 字符串数组）
+	if len(d.CommonNames) > 0 {
+		names := make([]string, 0, len(d.CommonNames))
+		for _, c := range d.CommonNames {
+			if c.Name != "" {
+				names = append(names, c.Name)
+			}
+		}
+		if b, err := json.Marshal(names); err == nil {
+			lib.CommonNames = string(b)
+		}
+	}
+	m := PlantMetrics{
+		MinLightMMOL: d.MinLightMMOL,
+		MaxLightMMOL: d.MaxLightMMOL,
+		MinLightLux:  d.MinLightLux,
+		MaxLightLux:  d.MaxLightLux,
+		MinTemp:      d.MinTemp,
+		MaxTemp:      d.MaxTemp,
+		MinEnvHumid:  d.MinEnvHumid,
+		MaxEnvHumid:  d.MaxEnvHumid,
+		MinSoilMoist: d.MinSoilMoist,
+		MaxSoilMoist: d.MaxSoilMoist,
+		MinSoilEC:    d.MinSoilEC,
+		MaxSoilEC:    d.MaxSoilEC,
+	}
+	if m != (PlantMetrics{}) {
+		if b, err := json.Marshal(m); err == nil {
+			lib.Metrics = string(b)
+		}
+	}
+	return lib
 }
 
-// buildGuide 将结构化字段拼成中文三段式指南（与内置 10 条风格一致）
+// buildGuide 将结构化字段拼成中文养护指南（与内置条目风格一致）。
+// 有数据的项才输出，避免出现「浇水：」这类空行。
 func buildGuide(d pbDetail) string {
+	care := d.careInfo()
 	var b strings.Builder
-	fmt.Fprintf(&b, "浇水：%s\n", wateringText(d.Watering))
-	if d.MinLight != "" || d.MaxLight != "" {
-		fmt.Fprintf(&b, "光照：%s ~ %s\n", d.MinLight, d.MaxLight)
+	addLine := func(label, v string) {
+		if v = strings.TrimSpace(v); v != "" {
+			fmt.Fprintf(&b, "%s：%s\n", label, v)
+		}
 	}
+
+	// 浇水：优先 care 文本描述，其次旧版枚举（frequent/average/…）
+	water := care.Watering
+	if water == "" {
+		if code := strings.TrimSpace(d.Watering); code != "" {
+			water = wateringEnumText(code)
+		}
+	}
+	addLine("浇水", water)
+
+	// 光照：优先 care 描述，其次 human 可读阈值
+	light := care.Light
+	if light == "" && (d.MinLight != "" || d.MaxLight != "") {
+		light = fmt.Sprintf("%s ~ %s", d.MinLight, d.MaxLight)
+	}
+	addLine("光照", light)
+
 	if d.MinTemp != 0 || d.MaxTemp != 0 {
 		fmt.Fprintf(&b, "温度：%.0f℃ ~ %.0f℃\n", d.MinTemp, d.MaxTemp)
 	}
-	if len(d.Soil) > 0 {
-		fmt.Fprintf(&b, "土壤：%s\n", strings.Join(d.Soil, "、"))
-	}
-	fmt.Fprintf(&b, "施肥：%s\n", d.Fertilization)
-	fmt.Fprintf(&b, "修剪：%s\n", d.Pruning)
+
+	addLine("土壤", care.Soil)
+	addLine("施肥", care.Fertilization)
+	addLine("修剪", care.Pruning)
+
 	return strings.TrimSpace(b.String())
 }
 
-func wateringText(code string) string {
+// wateringEnumText 旧版 watering 枚举的中文翻译；未知原样返回
+func wateringEnumText(code string) string {
 	switch strings.ToLower(code) {
 	case "frequent":
 		return "频繁（保持土壤湿润）"
@@ -351,9 +542,6 @@ func wateringText(code string) string {
 	case "none":
 		return "无需浇水"
 	default:
-		if code == "" {
-			return "适中"
-		}
 		return code
 	}
 }

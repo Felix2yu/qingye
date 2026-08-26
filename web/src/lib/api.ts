@@ -79,10 +79,16 @@ export interface PhotoDiary {
 export interface PlantLibrary {
 	id: number;
 	pid?: string;
+	displayPid?: string; // 学名展示形式
 	name: string;
 	alias: string;
+	category?: string; // 植物类别
+	origin?: string; // 原产地
+	commonNames?: string; // 全部常见名（JSON 字符串数组）
 	guide: string;
+	metrics?: string; // 结构化环境阈值 JSON（见 library 页解析展示）
 	image: string;
+	link?: string; // Plantbook 在线详情页
 }
 
 export interface OnlineCandidate {
@@ -205,9 +211,17 @@ export const api = {
 			method: 'POST',
 			body: JSON.stringify({ pid })
 		}),
-	// 批量同步内置热门植物到本地资料库（离线可用）
+	// 批量同步内置热门植物到本地资料库（离线可用，每轮限量）
 	syncPopularLibrary: () =>
-		request<{ added: number; failed: number; total: number; message: string }>('/api/library/sync-popular', {
+		request<{
+			added: number;
+			failed: number;
+			skipped: number;
+			remaining: number;
+			total: number;
+			throttled: boolean;
+			message: string;
+		}>('/api/library/sync-popular', {
 			method: 'POST'
 		}),
 
