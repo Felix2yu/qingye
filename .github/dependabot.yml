@@ -1,32 +1,37 @@
 version: 2
-
 updates:
-  # Go 后端依赖
+  # 后端 Go 依赖
   - package-ecosystem: "gomod"
     directory: "/server"
     schedule:
       interval: "daily"
+      time: "00:00"
+      timezone: "UTC"
     open-pull-requests-limit: 10
-    labels:
-      - "dependencies"
-      - "backend"
 
   # 前端 npm 依赖
   - package-ecosystem: "npm"
     directory: "/web"
     schedule:
       interval: "daily"
+      time: "00:00"
+      timezone: "UTC"
     open-pull-requests-limit: 10
-    labels:
-      - "dependencies"
-      - "frontend"
 
-  # GitHub Actions（workflow 中引用的 action 版本）
+  # Docker 基础镜像
+  - package-ecosystem: "docker"
+    directory: "/"
+    schedule:
+      interval: "daily"
+      time: "00:00"
+      timezone: "UTC"
+    open-pull-requests-limit: 10
+
+  # GitHub Actions 工作流
   - package-ecosystem: "github-actions"
     directory: "/"
     schedule:
       interval: "daily"
+      time: "00:00"
+      timezone: "UTC"
     open-pull-requests-limit: 10
-    labels:
-      - "dependencies"
-      - "ci"
