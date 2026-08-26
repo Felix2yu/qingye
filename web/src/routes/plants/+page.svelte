@@ -4,6 +4,7 @@
 	import type { Plant, Room, Task, OnlineCandidate, PlantLibrary } from '$lib/api';
 	import { showToast } from '$lib/stores';
 	import { imgUrl } from '$lib/api';
+	import Icon from '$lib/components/Icon.svelte';
 	import PlantCard from '$lib/components/PlantCard.svelte';
 
 	let plants = $state<Plant[]>([]);
@@ -13,7 +14,6 @@
 
 	let roomFilter = $state<number>(0); // 0 = 全部
 	let showForm = $state(false);
-	let showRoomForm = $state(false);
 
 	// 表单
 	let fName = $state('');
@@ -27,8 +27,98 @@
 	let fAttributes = $state('');
 
 	let rName = $state('');
-	let rSort = $state(0);
 	let rOutdoor = $state(false);
+
+	// 房间管理（编辑副本：拖拽/箭头排序，统一保存）
+	let showRoomMgr = $state(false);
+	let editRooms = $state<Room[]>([]);
+	let dragIndex = $state(-1);
+	let dragEl: HTMLElement | null = null;
+
+	function openRoomMgr() {
+		editRooms = rooms.map((r) => ({ ...r }));
+		showRoomMgr = true;
+	}
+
+	function moveRow(i: number, dir: -1 | 1) {
+		const j = i + dir;
+		if (j < 0 || j >= editRooms.length) return;
+		const arr = [...editRooms];
+		[arr[i], arr[j]] = [arr[j], arr[i]];
+		editRooms = arr;
+	}
+
+	function dragStart(e: DragEvent, i: number) {
+		dragIndex = i;
+		if (e.dataTransfer) {
+			e.dataTransfer.effectAllowed = 'move';
+			e.dataTransfer.setData('text/plain', String(i));
+		}
+	}
+
+	function dragOver(e: DragEvent, i: number) {
+		e.preventDefault();
+		if (e.dataTransfer) e.dataTransfer.dropEffect = 'move';
+		if (dragIndex === -1 || dragIndex === i) return;
+		const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+		const after = e.clientY > rect.top + rect.height / 2;
+		const to = after ? Math.min(i + 1, editRooms.length) : i;
+		const arr = [...editRooms];
+		const [m] = arr.splice(dragIndex, 1);
+		arr.splice(to > dragIndex ? to - 1 : to, 0, m);
+		editRooms = arr;
+		dragIndex = arr.indexOf(m);
+	}
+
+	// 拖柄按下时才让整行可拖拽，避免干扰输入框聚焦与文本选择
+	function handleDown(e: PointerEvent) {
+		dragEl = (e.currentTarget as HTMLElement).closest('.room-row');
+		if (dragEl) dragEl.draggable = true;
+	}
+	function releaseDrag() {
+		if (dragEl) dragEl.draggable = false;
+		dragEl = null;
+	}
+
+	async function saveRooms() {
+		for (const r of editRooms) {
+			if (!r.name.trim()) {
+				showToast('房间名称不能为空', 'err');
+				return;
+			}
+		}
+		try {
+			// 按当前列表顺序写入 sort
+			for (const [idx, r] of editRooms.entries()) {
+				await api.updateRoom(r.id, r.name.trim(), idx, r.isOutdoor);
+			}
+			showToast('房间已保存');
+			await load();
+			editRooms = rooms.map((r) => ({ ...r }));
+		} catch (e) {
+			showToast((e as Error).message, 'err');
+			await load();
+			editRooms = rooms.map((r) => ({ ...r }));
+		}
+	}
+
+	async function removeRoom(r: Room) {
+		const count = Number(r.count ?? 0);
+		const tip =
+			count > 0
+				? `房间「${r.name}」下还有 ${count} 株植物，需先移出或删除才能删除房间。仍要尝试吗？`
+				: `确定删除房间「${r.name}」？`;
+		if (!confirm(tip)) return;
+		try {
+			await api.deleteRoom(r.id);
+			showToast('已删除房间');
+			if (roomFilter === r.id) roomFilter = 0;
+			await load();
+			editRooms = editRooms.filter((x) => x.id !== r.id);
+		} catch (e) {
+			showToast((e as Error).message, 'err');
+		}
+	}
 
 	// 在线匹配（Plantbook）
 	let onlineEnabled = $state(false);
@@ -107,13 +197,13 @@
 			return;
 		}
 		try {
-			await api.createRoom(rName.trim(), rSort, rOutdoor);
+			// 新房间排在列表末尾
+			await api.createRoom(rName.trim(), rooms.length, rOutdoor);
 			showToast('已添加房间');
-			showRoomForm = false;
 			rName = '';
-			rSort = 0;
 			rOutdoor = false;
 			await load();
+			editRooms = rooms.map((r) => ({ ...r }));
 		} catch (e) {
 			showToast((e as Error).message, 'err');
 		}
@@ -136,11 +226,16 @@
 			const res = await api.searchLibraryOnline(kw);
 			onlineEnabled = res.enabled;
 			if (!res.enabled) {
-				onlineMsg = '未配置 Plantbook token，在线匹配已禁用';
+				onlineMsg = '未配置 Plantbook 凭据，在线匹配已禁用';
 				return;
 			}
 			onlineCands = res.list;
-			if (res.list.length === 0) onlineMsg = '在线库未找到匹配，可手动填写';
+			if (res.list.length === 0) {
+				onlineMsg =
+					[...kw].length < 3
+						? '未找到匹配：常见中文名可直接查找，其他词请至少输入 3 个字符'
+						: '在线库未找到匹配，可手动填写';
+			}
 		} catch (e) {
 			onlineMsg = (e as Error).message;
 		} finally {
@@ -176,7 +271,7 @@
 			<p class="page-sub">共 {plants.length} 株 · 按房间整理</p>
 		</div>
 		<div class="head-actions">
-			<button class="btn btn-ghost btn-sm" onclick={() => (showRoomForm = true)}>＋ 房间</button>
+			<button class="btn btn-ghost btn-sm" onclick={openRoomMgr}>管理房间</button>
 			<button class="btn btn-primary btn-sm" onclick={() => (showForm = true)}>＋ 植物</button>
 		</div>
 	</div>
@@ -280,27 +375,198 @@
 	</div>
 {/if}
 
-<!-- 新增房间 -->
-{#if showRoomForm}
-	<div class="modal-backdrop" onclick={() => (showRoomForm = false)}>
-		<div class="modal" onclick={(e) => e.stopPropagation()}>
-			<div class="modal-title">添加房间 / 分组</div>
-			<div class="form-field">
-				<label for="">名称 *</label>
-				<input bind:value={rName} placeholder="如：书房" />
+<!-- 房间管理：拖拽排序 / 改名 / 室内外 / 删除 / 新增 -->
+{#if showRoomMgr}
+	<div class="modal-backdrop" onclick={() => (showRoomMgr = false)}>
+		<div class="modal room-mgr" onclick={(e) => e.stopPropagation()}>
+			<div class="modal-title">管理房间</div>
+			<p class="muted mgr-hint">拖住 ⠿ 或用 ↑↓ 调整顺序，改名、切换室内/室外后点「保存修改」。</p>
+
+			<div class="room-list">
+				{#each editRooms as r, i (r.id)}
+					<div
+						class="room-row"
+						class:dragging={dragIndex === i}
+						ondragstart={(e) => dragStart(e, i)}
+						ondragover={(e) => dragOver(e, i)}
+						ondragend={() => {
+							dragIndex = -1;
+							releaseDrag();
+						}}
+						ondrop={(e) => e.preventDefault()}
+					>
+						<span
+							class="drag-handle"
+							title="拖动排序"
+							onpointerdown={handleDown}
+							onpointerup={releaseDrag}
+							onpointercancel={releaseDrag}
+							onpointerleave={releaseDrag}
+						>
+							<Icon name="grip" size={16} />
+						</span>
+						<span class="room-order">{i + 1}</span>
+						<input class="room-name" bind:value={r.name} placeholder="名称" />
+						<label class="room-outdoor" title="室外（阳台/花园，降雨时自动推迟浇水）">
+							<input type="checkbox" bind:checked={r.isOutdoor} />
+							<span>室外</span>
+						</label>
+						<button
+							class="icon-btn"
+							title="上移"
+							disabled={i === 0}
+							onclick={() => moveRow(i, -1)}
+						>
+							↑
+						</button>
+						<button
+							class="icon-btn"
+							title="下移"
+							disabled={i === editRooms.length - 1}
+							onclick={() => moveRow(i, 1)}
+						>
+							↓
+						</button>
+						<button class="btn btn-danger btn-sm room-del" onclick={() => removeRoom(r)}>删除</button>
+					</div>
+				{/each}
+				{#if editRooms.length === 0}
+					<p class="muted">还没有房间，在下方添加第一个吧</p>
+				{/if}
 			</div>
-			<div class="form-field">
-				<label for="">排序</label>
-				<input type="number" bind:value={rSort} />
+
+			<div class="room-add">
+				<div class="room-add-title">添加房间</div>
+				<div class="room-row">
+					<span class="drag-handle ghost"></span>
+					<span class="room-order add">＋</span>
+					<input class="room-name" bind:value={rName} placeholder="如：书房 *" />
+					<label class="room-outdoor" title="室外（阳台/花园，降雨时自动推迟浇水）">
+						<input type="checkbox" bind:checked={rOutdoor} />
+						<span>室外</span>
+					</label>
+					<button class="btn btn-primary btn-sm room-add-btn" onclick={submitRoom}>添加</button>
+				</div>
 			</div>
-			<label class="toggle-row">
-				<input type="checkbox" bind:checked={rOutdoor} />
-				<span>室外（阳台/花园，降雨时自动推迟浇水）</span>
-			</label>
+
 			<div class="modal-actions">
-				<button class="btn btn-ghost" onclick={() => (showRoomForm = false)}>取消</button>
-				<button class="btn btn-primary" onclick={submitRoom}>保存</button>
+				<button class="btn btn-ghost" onclick={() => (showRoomMgr = false)}>关闭</button>
+				<button class="btn btn-primary" onclick={saveRooms}>保存修改</button>
 			</div>
 		</div>
 	</div>
 {/if}
+
+<style>
+	.room-mgr {
+		max-width: 560px;
+	}
+	.mgr-hint {
+		margin: -10px 0 14px;
+	}
+	.room-list {
+		display: flex;
+		flex-direction: column;
+		gap: 8px;
+		margin-bottom: 18px;
+	}
+	.room-row {
+		display: flex;
+		align-items: center;
+		gap: 8px;
+		flex-wrap: wrap;
+		border: 1px solid var(--border);
+		border-radius: var(--radius-sm);
+		padding: 8px 10px;
+		background: var(--surface);
+		transition: border-color 0.15s, opacity 0.15s;
+	}
+	.room-row.dragging {
+		opacity: 0.45;
+		border-style: dashed;
+	}
+	.drag-handle {
+		display: flex;
+		align-items: center;
+		color: var(--text-secondary);
+		cursor: grab;
+		touch-action: none;
+		flex-shrink: 0;
+	}
+	.drag-handle:active {
+		cursor: grabbing;
+	}
+	.drag-handle.ghost {
+		visibility: hidden;
+	}
+	.room-order {
+		width: 20px;
+		text-align: center;
+		font-size: 12px;
+		color: var(--text-secondary);
+		flex-shrink: 0;
+		font-variant-numeric: tabular-nums;
+	}
+	.room-name {
+		flex: 1 1 110px;
+		min-width: 0;
+		padding: 7px 10px;
+	}
+	.icon-btn {
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+		width: 28px;
+		height: 28px;
+		border-radius: 8px;
+		border: 1px solid var(--border);
+		background: var(--surface);
+		color: var(--text-secondary);
+		font-size: 14px;
+		line-height: 1;
+		flex-shrink: 0;
+		transition: color 0.15s, border-color 0.15s;
+	}
+	.icon-btn:hover:not(:disabled) {
+		color: var(--green-700);
+		border-color: var(--green-500);
+	}
+	.icon-btn:disabled {
+		opacity: 0.35;
+		cursor: default;
+	}
+	.room-outdoor {
+		display: inline-flex;
+		align-items: center;
+		gap: 5px;
+		font-size: 13px;
+		color: var(--text-secondary);
+		cursor: pointer;
+		flex-shrink: 0;
+	}
+	.room-outdoor input {
+		width: auto;
+		margin: 0;
+	}
+	.room-del {
+		flex-shrink: 0;
+	}
+	.room-add {
+		border-top: 1px dashed var(--border);
+		padding-top: 14px;
+	}
+	.room-add-title {
+		font-size: 13px;
+		font-weight: 600;
+		color: var(--text-secondary);
+		margin-bottom: 10px;
+	}
+	.room-add-btn {
+		align-self: stretch;
+	}
+	@media (max-width: 480px) {
+		.room-del {
+			margin-left: auto;
+		}
+	}
+</style>
