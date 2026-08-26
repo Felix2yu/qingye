@@ -254,7 +254,7 @@
 
 	<div class="card setting-card">
 		<div class="setting-title">关于</div>
-		<p class="muted">青野 · 家庭园艺植物记录与养护 Web 应用</p>
+		<p class="muted">青野 · 家庭园艺植物记录与养护应用</p>
 	</div>
 </div>
 

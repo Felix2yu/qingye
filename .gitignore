@@ -27,3 +27,6 @@ qingye
 .idea/
 .vscode/
 *.log
+
+# ---- 内部工具数据（不上传） ----
+.codebuddy/
