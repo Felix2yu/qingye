@@ -5,6 +5,7 @@
 	import { showToast } from '$lib/stores';
 	import { imgUrl } from '$lib/api';
 	import Icon from '$lib/components/Icon.svelte';
+	import { ROOM_ICONS } from '$lib/format';
 	import PlantCard from '$lib/components/PlantCard.svelte';
 
 	let plants = $state<Plant[]>([]);
@@ -34,18 +35,11 @@
 	let editRooms = $state<Room[]>([]);
 	let dragIndex = $state(-1);
 	let dragEl: HTMLElement | null = null;
+	let openPicker = $state<number | null>(null);
 
 	function openRoomMgr() {
 		editRooms = rooms.map((r) => ({ ...r }));
 		showRoomMgr = true;
-	}
-
-	function moveRow(i: number, dir: -1 | 1) {
-		const j = i + dir;
-		if (j < 0 || j >= editRooms.length) return;
-		const arr = [...editRooms];
-		[arr[i], arr[j]] = [arr[j], arr[i]];
-		editRooms = arr;
 	}
 
 	function dragStart(e: DragEvent, i: number) {
@@ -90,7 +84,7 @@
 		try {
 			// 按当前列表顺序写入 sort
 			for (const [idx, r] of editRooms.entries()) {
-				await api.updateRoom(r.id, r.name.trim(), idx, r.isOutdoor);
+				await api.updateRoom(r.id, r.name.trim(), idx, r.isOutdoor, r.icon ?? '');
 			}
 			showToast('房间已保存');
 			await load();
@@ -129,7 +123,7 @@
 
 	async function toggleRoomOutdoor(r: Room) {
 		try {
-			await api.updateRoom(r.id, r.name, r.sort, !r.isOutdoor);
+			await api.updateRoom(r.id, r.name, r.sort, !r.isOutdoor, r.icon);
 			showToast(!r.isOutdoor ? '已标记为室外' : '已标记为室内');
 			await load();
 		} catch (e) {
@@ -198,7 +192,7 @@
 		}
 		try {
 			// 新房间排在列表末尾
-			await api.createRoom(rName.trim(), rooms.length, rOutdoor);
+			await api.createRoom(rName.trim(), rooms.length, rOutdoor, '');
 			showToast('已添加房间');
 			rName = '';
 			rOutdoor = false;
@@ -281,6 +275,7 @@
 			<button class="chip" class:active={roomFilter === 0} onclick={() => (roomFilter = 0)}>全部</button>
 			{#each rooms as r}
 				<button class="chip" class:active={roomFilter === r.id} onclick={() => (roomFilter = r.id)} title={r.isOutdoor ? '室外 · 点击切换' : '室内 · 点击切换'}>
+					<Icon name={r.icon || 'house'} size={14} />
 					{r.name}{r.count ? ` · ${r.count}` : ''}
 					{#if r.isOutdoor}<span class="outdoor-dot" title="室外">☀️</span>{/if}
 				</button>
@@ -380,7 +375,7 @@
 	<div class="modal-backdrop" onclick={() => (showRoomMgr = false)}>
 		<div class="modal room-mgr" onclick={(e) => e.stopPropagation()}>
 			<div class="modal-title">管理房间</div>
-			<p class="muted mgr-hint">拖住 ⠿ 或用 ↑↓ 调整顺序，改名、切换室内/室外后点「保存修改」。</p>
+			<p class="muted mgr-hint">拖住 ⠿ 调整顺序，点击图标可设置房间图标，改名、切换室内/室外后点「保存修改」。</p>
 
 			<div class="room-list">
 				{#each editRooms as r, i (r.id)}
@@ -412,21 +407,31 @@
 							<span>室外</span>
 						</label>
 						<button
-							class="icon-btn"
-							title="上移"
-							disabled={i === 0}
-							onclick={() => moveRow(i, -1)}
+							type="button"
+							class="room-icon-btn"
+							title="选择图标"
+							onclick={() => (openPicker = openPicker === i ? null : i)}
 						>
-							↑
+							<Icon name={r.icon || 'house'} size={18} />
 						</button>
-						<button
-							class="icon-btn"
-							title="下移"
-							disabled={i === editRooms.length - 1}
-							onclick={() => moveRow(i, 1)}
-						>
-							↓
-						</button>
+						{#if openPicker === i}
+							<div class="icon-pop">
+								{#each ROOM_ICONS as ic}
+									<button
+										type="button"
+										class="icon-pop-item"
+										class:sel={r.icon === ic.value}
+										title={ic.label}
+										onclick={() => {
+											r.icon = ic.value;
+											openPicker = null;
+										}}
+									>
+										<Icon name={ic.value} size={18} />
+									</button>
+								{/each}
+							</div>
+						{/if}
 						<button class="btn btn-danger btn-sm room-del" onclick={() => removeRoom(r)}>删除</button>
 					</div>
 				{/each}
@@ -525,28 +530,56 @@
 		min-width: 0;
 		padding: 7px 10px;
 	}
-	.icon-btn {
+	.room-icon-btn {
 		display: inline-flex;
 		align-items: center;
 		justify-content: center;
-		width: 28px;
-		height: 28px;
+		width: 32px;
+		height: 32px;
 		border-radius: 8px;
 		border: 1px solid var(--border);
 		background: var(--surface);
 		color: var(--text-secondary);
-		font-size: 14px;
-		line-height: 1;
 		flex-shrink: 0;
+		cursor: pointer;
 		transition: color 0.15s, border-color 0.15s;
 	}
-	.icon-btn:hover:not(:disabled) {
+	.room-icon-btn:hover {
 		color: var(--green-700);
 		border-color: var(--green-500);
 	}
-	.icon-btn:disabled {
-		opacity: 0.35;
-		cursor: default;
+	.icon-pop {
+		flex-basis: 100%;
+		display: grid;
+		grid-template-columns: repeat(auto-fill, minmax(38px, 1fr));
+		gap: 6px;
+		padding: 8px;
+		margin-top: 2px;
+		border: 1px solid var(--border);
+		border-radius: 10px;
+		background: var(--bg);
+	}
+	.icon-pop-item {
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+		width: 38px;
+		height: 38px;
+		border: 1px solid var(--border);
+		border-radius: 8px;
+		background: var(--surface);
+		color: var(--text-secondary);
+		cursor: pointer;
+		transition: color 0.15s, border-color 0.15s, background 0.15s;
+	}
+	.icon-pop-item:hover {
+		color: var(--green-700);
+		border-color: var(--green-500);
+	}
+	.icon-pop-item.sel {
+		color: var(--green-700);
+		border-color: var(--green-500);
+		background: var(--green-50);
 	}
 	.room-outdoor {
 		display: inline-flex;

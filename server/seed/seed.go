@@ -108,9 +108,9 @@ var libraryData = []models.PlantLibrary{
 // seedDemo 写入演示用的房间、植物与任务，便于首次启动即见完整效果
 func seedDemo(db *gorm.DB) error {
 	rooms := []models.Room{
-		{Name: "客厅", Sort: 1},
-		{Name: "阳台", Sort: 2},
-		{Name: "卧室", Sort: 3},
+		{Name: "客厅", Sort: 1, Icon: "sofa"},
+		{Name: "阳台", Sort: 2, Icon: "sun"},
+		{Name: "卧室", Sort: 3, Icon: "bed"},
 	}
 	if err := db.Create(&rooms).Error; err != nil {
 		return err

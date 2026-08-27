@@ -64,7 +64,7 @@ func NewRoomRepo() *RoomRepo { return &RoomRepo{db: DB} }
 func (r *RoomRepo) Create(room *models.Room) error { return r.db.Create(room).Error }
 
 func (r *RoomRepo) Update(room *models.Room) error {
-	return r.db.Model(room).Updates(map[string]any{"name": room.Name, "sort": room.Sort, "is_outdoor": room.IsOutdoor}).Error
+	return r.db.Model(room).Updates(map[string]any{"name": room.Name, "sort": room.Sort, "is_outdoor": room.IsOutdoor, "icon": room.Icon}).Error
 }
 
 func (r *RoomRepo) Delete(id uint) error { return r.db.Delete(&models.Room{}, id).Error }

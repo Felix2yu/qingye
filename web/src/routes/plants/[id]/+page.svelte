@@ -3,7 +3,8 @@
 	import { page } from '$app/stores';
 	import { api, imgUrl } from '$lib/api';
 	import type { Plant, Task, PhotoDiary, CareLog } from '$lib/api';
-	import { dueLabel, TASK_TYPE_EMOJI, TASK_TYPE_LABEL, formatDate, formatDateTime, careTypeLabel, fmtDate } from '$lib/format';
+	import { dueLabel, TASK_TYPES, TASK_TYPE_EMOJI, TASK_TYPE_LABEL, formatDate, formatDateTime, careTypeLabel, fmtDate } from '$lib/format';
+	import Icon from '$lib/components/Icon.svelte';
 	import { showToast } from '$lib/stores';
 	import { goto } from '$app/navigation';
 
@@ -169,7 +170,7 @@
 				{#if plant.note}<p class="note">{plant.note}</p>{/if}
 				<div class="meta">
 					{#if plant.location}<span>📍 {plant.location}</span>{/if}
-					{#if plant.room}<span>🏠 {plant.room.name}</span>{/if}
+					{#if plant.room}<span><Icon name={plant.room.icon || 'house'} size={14} /> {plant.room.name}</span>{/if}
 					{#if plant.lightReq}<span>☀️ {plant.lightReq}</span>{/if}
 					{#if plant.acquiredDate}<span>🗓️ {fmtDate(plant.acquiredDate)}</span>{/if}
 				</div>
@@ -227,19 +228,22 @@
 		</div>
 		{#if showCareForm}
 			<div class="card care-form">
-				<div class="form-field">
-					<label for="">类型</label>
-					<select bind:value={cType}>
-						<option value="water">💧 浇水</option>
-						<option value="fertilize">🌱 施肥</option>
-						<option value="mist">🌫️ 喷雾</option>
-						<option value="repot">🪴 换盆</option>
-						<option value="prune">✂️ 修剪</option>
-						<option value="clean">🧹 清理</option>
-						<option value="pesticide">🐛 除虫</option>
-						<option value="other">✨ 其他</option>
-					</select>
+			<div class="form-field">
+				<label for="">类型</label>
+				<div class="type-grid">
+					{#each TASK_TYPES as t}
+						<button
+							type="button"
+							class="type-tile"
+							class:selected={cType === t.value}
+							onclick={() => (cType = t.value)}
+						>
+							<Icon name={t.icon} size={24} />
+							<span class="type-label">{t.label}</span>
+						</button>
+					{/each}
 				</div>
+			</div>
 				<div class="form-field"><label for="">标题（可选）</label><input bind:value={cTitle} placeholder="留空用类型名" /></div>
 				<div class="form-field"><label for="">备注</label><textarea bind:value={cNote} rows="2"></textarea></div>
 				<div class="modal-actions">
@@ -299,16 +303,19 @@
 			<div class="modal-title">添加养护任务</div>
 			<div class="form-field">
 				<label for="">类型</label>
-				<select bind:value={tType}>
-					<option value="water">💧 浇水</option>
-					<option value="fertilize">🌱 施肥</option>
-					<option value="mist">🌫️ 喷雾</option>
-					<option value="repot">🪴 换盆</option>
-					<option value="prune">✂️ 修剪</option>
-					<option value="clean">🧹 清理</option>
-					<option value="pesticide">🐛 除虫</option>
-					<option value="other">✨ 其他</option>
-				</select>
+				<div class="type-grid">
+					{#each TASK_TYPES as t}
+						<button
+							type="button"
+							class="type-tile"
+							class:selected={tType === t.value}
+							onclick={() => (tType = t.value)}
+						>
+							<Icon name={t.icon} size={24} />
+							<span class="type-label">{t.label}</span>
+						</button>
+					{/each}
+				</div>
 			</div>
 			<div class="form-field"><label for="">标题（可选）</label><input bind:value={tTitle} placeholder="留空用类型名" /></div>
 			<div class="form-field"><label for="">周期（天）</label><input type="number" bind:value={tInterval} /></div>
@@ -416,6 +423,45 @@
 	.care-form {
 		padding: 16px;
 		margin-bottom: 16px;
+	}
+	.type-grid {
+		display: grid;
+		grid-template-columns: repeat(4, 1fr);
+		gap: 8px;
+	}
+	.type-tile {
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+		justify-content: center;
+		gap: 4px;
+		padding: 10px 4px;
+		border: 1px solid var(--border);
+		border-radius: 12px;
+		background: var(--bg);
+		color: var(--text);
+		cursor: pointer;
+		font-size: 13px;
+		transition: border-color 0.15s, background 0.15s, transform 0.05s;
+	}
+	.type-tile:hover {
+		border-color: var(--green-500);
+	}
+	.type-tile:active {
+		transform: scale(0.97);
+	}
+	.type-tile.selected {
+		border-color: var(--green-500);
+		background: var(--green-50);
+		color: var(--green-700);
+		font-weight: 600;
+	}
+	.type-tile :global(svg) {
+		width: 24px;
+		height: 24px;
+	}
+	.type-label {
+		line-height: 1.1;
 	}
 	.hero-actions {
 		display: flex;

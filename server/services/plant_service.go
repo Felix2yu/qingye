@@ -123,6 +123,7 @@ func (s *RoomService) ListWithStats() ([]map[string]any, error) {
 			"name":  r.Name,
 			"sort":  r.Sort,
 			"count": stats[r.ID],
+			"icon":  r.Icon,
 		})
 	}
 	return out, nil

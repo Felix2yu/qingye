@@ -2,6 +2,7 @@
 	import type { Plant } from '$lib/api';
 	import { imgUrl } from '$lib/api';
 	import { goto } from '$app/navigation';
+	import Icon from '$lib/components/Icon.svelte';
 
 	let { plant, pending = 0 }: { plant: Plant; pending?: number } = $props();
 
@@ -24,7 +25,13 @@
 	<div class="info">
 		<div class="name">{plant.name}</div>
 		<div class="meta">
-			{plant.species ? plant.species : plant.room?.name ?? '未分组'}
+			{#if plant.species}
+				{plant.species}
+			{:else if plant.room}
+				<Icon name={plant.room.icon || 'house'} size={13} /> {plant.room.name}
+			{:else}
+				未分组
+			{/if}
 		</div>
 	</div>
 </div>

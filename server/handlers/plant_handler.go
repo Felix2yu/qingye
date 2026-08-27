@@ -76,6 +76,7 @@ type roomBody struct {
 	Name      string `json:"name"`
 	Sort      int    `json:"sort"`
 	IsOutdoor bool   `json:"isOutdoor"`
+	Icon      string `json:"icon"`
 }
 
 func (h *PlantHandler) CreateRoom(c *gin.Context) {
@@ -84,7 +85,7 @@ func (h *PlantHandler) CreateRoom(c *gin.Context) {
 		BadRequest(c, "请求格式错误")
 		return
 	}
-	room, err := h.rooms.Create(&models.Room{Name: body.Name, Sort: body.Sort, IsOutdoor: body.IsOutdoor})
+	room, err := h.rooms.Create(&models.Room{Name: body.Name, Sort: body.Sort, IsOutdoor: body.IsOutdoor, Icon: body.Icon})
 	if err != nil {
 		BadRequest(c, err.Error())
 		return
@@ -102,7 +103,7 @@ func (h *PlantHandler) UpdateRoom(c *gin.Context) {
 		BadRequest(c, "请求格式错误")
 		return
 	}
-	room, err := h.rooms.Update(&models.Room{ID: id, Name: body.Name, Sort: body.Sort, IsOutdoor: body.IsOutdoor})
+	room, err := h.rooms.Update(&models.Room{ID: id, Name: body.Name, Sort: body.Sort, IsOutdoor: body.IsOutdoor, Icon: body.Icon})
 	if err != nil {
 		BadRequest(c, err.Error())
 		return

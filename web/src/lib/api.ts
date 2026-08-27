@@ -17,6 +17,7 @@ export interface Room {
 	sort: number;
 	count?: number;
 	isOutdoor?: boolean;
+	icon?: string;
 }
 
 export interface Plant {
@@ -25,7 +26,7 @@ export interface Plant {
 	species: string;
 	photo: string;
 	roomId: number;
-	room?: { id: number; name: string; sort: number } | null;
+	room?: { id: number; name: string; sort: number; icon?: string } | null;
 	note: string;
 	// 扩充属性（参考 hortusfox）
 	location: string;
@@ -166,12 +167,12 @@ async function request<T>(path: string, options?: RequestInit): Promise<T> {
 export const api = {
 	// ---- 房间 ----
 	listRooms: () => request<Room[]>('/api/rooms'),
-	createRoom: (name: string, sort = 0, isOutdoor = false) =>
-		request<Room>('/api/rooms', { method: 'POST', body: JSON.stringify({ name, sort, isOutdoor }) }),
-	updateRoom: (id: number, name: string, sort = 0, isOutdoor?: boolean) =>
+	createRoom: (name: string, sort = 0, isOutdoor = false, icon = '') =>
+		request<Room>('/api/rooms', { method: 'POST', body: JSON.stringify({ name, sort, isOutdoor, icon }) }),
+	updateRoom: (id: number, name: string, sort = 0, isOutdoor?: boolean, icon?: string) =>
 		request<Room>(`/api/rooms/${id}`, {
 			method: 'PUT',
-			body: JSON.stringify({ name, sort, isOutdoor })
+			body: JSON.stringify({ name, sort, isOutdoor, icon })
 		}),
 	deleteRoom: (id: number) => request<void>(`/api/rooms/${id}`, { method: 'DELETE' }),
 

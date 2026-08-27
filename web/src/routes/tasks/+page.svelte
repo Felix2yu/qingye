@@ -4,7 +4,8 @@
 	import type { Plant, Task } from '$lib/api';
 	import { showToast } from '$lib/stores';
 	import TaskItem from '$lib/components/TaskItem.svelte';
-	import { TASK_TYPE_LABEL } from '$lib/format';
+	import { TASK_TYPE_LABEL, TASK_TYPES } from '$lib/format';
+	import Icon from '$lib/components/Icon.svelte';
 	import { goto } from '$app/navigation';
 
 	let tasks = $state<Task[]>([]);
@@ -127,16 +128,19 @@
 			</div>
 			<div class="form-field">
 				<label for="">类型</label>
-				<select bind:value={fType}>
-					<option value="water">💧 浇水</option>
-					<option value="fertilize">🌱 施肥</option>
-					<option value="mist">🌫️ 喷雾</option>
-					<option value="repot">🪴 换盆</option>
-					<option value="prune">✂️ 修剪</option>
-					<option value="clean">🧹 清理</option>
-					<option value="pesticide">🐛 除虫</option>
-					<option value="other">✨ 其他</option>
-				</select>
+				<div class="type-grid">
+					{#each TASK_TYPES as t}
+						<button
+							type="button"
+							class="type-tile"
+							class:selected={fType === t.value}
+							onclick={() => (fType = t.value)}
+						>
+							<Icon name={t.icon} size={24} />
+							<span class="type-label">{t.label}</span>
+						</button>
+					{/each}
+				</div>
 			</div>
 			<div class="form-field"><label for="">标题（可选）</label><input bind:value={fTitle} placeholder="留空用类型名" /></div>
 			<div class="form-field"><label for="">周期（天）</label><input type="number" bind:value={fInterval} /></div>
@@ -177,5 +181,44 @@
 	}
 	.toggle input {
 		width: auto;
+	}
+	.type-grid {
+		display: grid;
+		grid-template-columns: repeat(4, 1fr);
+		gap: 8px;
+	}
+	.type-tile {
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+		justify-content: center;
+		gap: 4px;
+		padding: 10px 4px;
+		border: 1px solid var(--border);
+		border-radius: 12px;
+		background: var(--bg);
+		color: var(--text);
+		cursor: pointer;
+		font-size: 13px;
+		transition: border-color 0.15s, background 0.15s, transform 0.05s;
+	}
+	.type-tile:hover {
+		border-color: var(--green-500);
+	}
+	.type-tile:active {
+		transform: scale(0.97);
+	}
+	.type-tile.selected {
+		border-color: var(--green-500);
+		background: var(--green-50);
+		color: var(--green-700);
+		font-weight: 600;
+	}
+	.type-tile :global(svg) {
+		width: 24px;
+		height: 24px;
+	}
+	.type-label {
+		line-height: 1.1;
 	}
 </style>
