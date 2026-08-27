@@ -297,6 +297,13 @@ p {
 	margin-bottom: 6px;
 }
 
+.field-label {
+	display: block;
+	font-size: 13px;
+	color: var(--text-secondary);
+	margin-bottom: 6px;
+}
+
 /* ---- 在线匹配（Plantbook） ---- */
 .name-row {
 	display: flex;

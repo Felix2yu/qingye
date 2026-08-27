@@ -115,8 +115,18 @@
 </div>
 
 {#if showDetail}
-	<div class="modal-backdrop" onclick={() => (showDetail = null)}>
-		<div class="modal" onclick={(e) => e.stopPropagation()}>
+	<div
+		class="modal-backdrop"
+		role="button"
+		tabindex="-1"
+		onclick={(e) => {
+			if (e.target === e.currentTarget) showDetail = null;
+		}}
+		onkeydown={(e) => {
+			if (e.key === 'Escape') showDetail = null;
+		}}
+	>
+		<div class="modal">
 			<div class="modal-title">{showDetail.name}</div>
 			<p class="muted meta-line">
 				{#if showDetail.displayPid || showDetail.alias}
@@ -182,6 +192,7 @@
 		margin-top: 8px;
 		display: -webkit-box;
 		-webkit-line-clamp: 3;
+		line-clamp: 3;
 		-webkit-box-orient: vertical;
 		overflow: hidden;
 	}

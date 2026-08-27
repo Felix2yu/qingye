@@ -117,18 +117,28 @@
 </div>
 
 {#if showForm}
-	<div class="modal-backdrop" onclick={() => (showForm = false)}>
-		<div class="modal" onclick={(e) => e.stopPropagation()}>
+	<div
+		class="modal-backdrop"
+		role="button"
+		tabindex="-1"
+		onclick={(e) => {
+			if (e.target === e.currentTarget) showForm = false;
+		}}
+		onkeydown={(e) => {
+			if (e.key === 'Escape') showForm = false;
+		}}
+	>
+		<div class="modal">
 			<div class="modal-title">添加任务</div>
 			<div class="form-field">
-				<label for="">植物 *</label>
-				<select bind:value={fPlant}>
+				<label for="task-plant">植物 *</label>
+				<select id="task-plant" bind:value={fPlant}>
 					{#each plants as p}<option value={p.id}>{p.name}</option>{/each}
 				</select>
 			</div>
 			<div class="form-field">
-				<label for="">类型</label>
-				<div class="type-grid">
+				<div class="field-label" id="task-type-cap">类型</div>
+				<div class="type-grid" role="group" aria-labelledby="task-type-cap">
 					{#each TASK_TYPES as t}
 						<button
 							type="button"
@@ -142,8 +152,8 @@
 					{/each}
 				</div>
 			</div>
-			<div class="form-field"><label for="">标题（可选）</label><input bind:value={fTitle} placeholder="留空用类型名" /></div>
-			<div class="form-field"><label for="">周期（天）</label><input type="number" bind:value={fInterval} /></div>
+			<div class="form-field"><label for="task-title">标题（可选）</label><input id="task-title" bind:value={fTitle} placeholder="留空用类型名" /></div>
+			<div class="form-field"><label for="task-interval">周期（天）</label><input id="task-interval" type="number" bind:value={fInterval} /></div>
 			<div class="modal-actions">
 				<button class="btn btn-ghost" onclick={() => (showForm = false)}>取消</button>
 				<button class="btn btn-primary" onclick={submitTask}>保存</button>

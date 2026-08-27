@@ -62,8 +62,8 @@
 		}
 	}
 
-	const typeLabel = TASK_TYPE_LABEL[task.type] ?? task.type;
-	const emoji = TASK_TYPE_EMOJI[task.type] ?? '🌿';
+	const typeLabel = $derived(TASK_TYPE_LABEL[task.type] ?? task.type);
+	const emoji = $derived(TASK_TYPE_EMOJI[task.type] ?? '🌿');
 </script>
 
 <div class="card task-item" class:overdue={due.overdue}>
@@ -84,8 +84,18 @@
 </div>
 
 {#if showHistory}
-	<div class="modal-backdrop" onclick={closeHistory}>
-		<div class="modal hist-modal" onclick={(e) => e.stopPropagation()}>
+	<div
+		class="modal-backdrop"
+		role="button"
+		tabindex="-1"
+		onclick={(e) => {
+			if (e.target === e.currentTarget) closeHistory();
+		}}
+		onkeydown={(e) => {
+			if (e.key === 'Escape') closeHistory();
+		}}
+	>
+		<div class="modal hist-modal">
 			<div class="modal-title">
 				{task.title || typeLabel} · 任务历史
 				<button class="modal-close" onclick={closeHistory} aria-label="关闭">×</button>

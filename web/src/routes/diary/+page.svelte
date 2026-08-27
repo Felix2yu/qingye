@@ -126,29 +126,39 @@
 </div>
 
 {#if showForm}
-	<div class="modal-backdrop" onclick={() => (showForm = false)}>
-		<div class="modal" onclick={(e) => e.stopPropagation()}>
+	<div
+		class="modal-backdrop"
+		role="button"
+		tabindex="-1"
+		onclick={(e) => {
+			if (e.target === e.currentTarget) showForm = false;
+		}}
+		onkeydown={(e) => {
+			if (e.key === 'Escape') showForm = false;
+		}}
+	>
+		<div class="modal">
 			<div class="modal-title">记录一笔</div>
 			<div class="form-field">
-				<label for="">植物 *</label>
-				<select bind:value={fPlant}>
+				<label for="diary-plant">植物 *</label>
+				<select id="diary-plant" bind:value={fPlant}>
 					{#each plants as p}<option value={p.id}>{p.name}</option>{/each}
 				</select>
 			</div>
 			<div class="form-field">
-				<label for="">图片 *</label>
-				<input type="file" accept="image/*" onchange={onFile} />
+				<label for="diary-image">图片 *</label>
+				<input id="diary-image" type="file" accept="image/*" onchange={onFile} />
 				{#if preview}
 					<img class="preview" src={preview} alt="预览" />
 				{/if}
 			</div>
 			<div class="form-field">
-				<label for="">说明</label>
-				<textarea bind:value={fCaption} rows="2" placeholder="今天的状态…"></textarea>
+				<label for="diary-caption">说明</label>
+				<textarea id="diary-caption" bind:value={fCaption} rows="2" placeholder="今天的状态…"></textarea>
 			</div>
 			<div class="form-field">
-				<label for="">拍摄日期</label>
-				<input type="date" bind:value={fTakenAt} />
+				<label for="diary-takenat">拍摄日期</label>
+				<input id="diary-takenat" type="date" bind:value={fTakenAt} />
 			</div>
 			<div class="modal-actions">
 				<button class="btn btn-ghost" onclick={() => (showForm = false)}>取消</button>

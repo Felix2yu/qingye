@@ -298,13 +298,23 @@
 
 <!-- 新增植物 -->
 {#if showForm}
-	<div class="modal-backdrop" onclick={() => (showForm = false)}>
-		<div class="modal" onclick={(e) => e.stopPropagation()}>
+	<div
+		class="modal-backdrop"
+		role="button"
+		tabindex="-1"
+		onclick={(e) => {
+			if (e.target === e.currentTarget) showForm = false;
+		}}
+		onkeydown={(e) => {
+			if (e.key === 'Escape') showForm = false;
+		}}
+	>
+		<div class="modal">
 			<div class="modal-title">添加植物</div>
 			<div class="form-field">
-				<label for="">名称 *</label>
+				<label for="plant-name">名称 *</label>
 				<div class="name-row">
-					<input bind:value={fName} placeholder="如：绿萝" />
+					<input id="plant-name" bind:value={fName} placeholder="如：绿萝" />
 					<button class="btn btn-ghost btn-sm" type="button" onclick={searchOnline} disabled={onlineLoading}>
 						{onlineLoading ? '查找中…' : '在线查找'}
 					</button>
@@ -329,38 +339,38 @@
 				{/if}
 			</div>
 			<div class="form-field">
-				<label for="">品种</label>
-				<input bind:value={fSpecies} placeholder="如：Epipremnum aureum" />
+				<label for="plant-species">品种</label>
+				<input id="plant-species" bind:value={fSpecies} placeholder="如：Epipremnum aureum" />
 			</div>
 			<div class="form-field">
-				<label for="">所在房间 / 分组</label>
-				<select bind:value={fRoom}>
+				<label for="plant-room">所在房间 / 分组</label>
+				<select id="plant-room" bind:value={fRoom}>
 					{#each rooms as r}<option value={r.id}>{r.name}</option>{/each}
 				</select>
 			</div>
 			<div class="form-field">
-				<label for="">详细方位</label>
-				<input bind:value={fLocation} placeholder="如：阳台左侧" />
+				<label for="plant-location">详细方位</label>
+				<input id="plant-location" bind:value={fLocation} placeholder="如：阳台左侧" />
 			</div>
 			<div class="form-field">
-				<label for="">光照需求</label>
-				<input bind:value={fLightReq} placeholder="如：散射光 / 耐阴" />
+				<label for="plant-light">光照需求</label>
+				<input id="plant-light" bind:value={fLightReq} placeholder="如：散射光 / 耐阴" />
 			</div>
 			<div class="form-field">
-				<label for="">获得日期</label>
-				<input bind:value={fAcquired} type="date" />
+				<label for="plant-acquired">获得日期</label>
+				<input id="plant-acquired" bind:value={fAcquired} type="date" />
 			</div>
 			<div class="form-field">
-				<label for="">照片链接（可选）</label>
-				<input bind:value={fPhoto} placeholder="https://… 或留空用首字占位" />
+				<label for="plant-photo">照片链接（可选）</label>
+				<input id="plant-photo" bind:value={fPhoto} placeholder="https://… 或留空用首字占位" />
 			</div>
 			<div class="form-field">
-				<label for="">备注</label>
-				<textarea bind:value={fNote} rows="2" placeholder="养护小贴士…"></textarea>
+				<label for="plant-note">备注</label>
+				<textarea id="plant-note" bind:value={fNote} rows="2" placeholder="养护小贴士…"></textarea>
 			</div>
 			<div class="form-field">
-				<label for="">扩展属性 (JSON)</label>
-				<textarea bind:value={fAttributes} rows="2" placeholder={'{"土壤":"泥炭土"}'}></textarea>
+				<label for="plant-attributes">扩展属性 (JSON)</label>
+				<textarea id="plant-attributes" bind:value={fAttributes} rows="2" placeholder={'{"土壤":"泥炭土"}'}></textarea>
 			</div>
 			<div class="modal-actions">
 				<button class="btn btn-ghost" onclick={() => (showForm = false)}>取消</button>
@@ -372,16 +382,27 @@
 
 <!-- 房间管理：拖拽排序 / 改名 / 室内外 / 删除 / 新增 -->
 {#if showRoomMgr}
-	<div class="modal-backdrop" onclick={() => (showRoomMgr = false)}>
-		<div class="modal room-mgr" onclick={(e) => e.stopPropagation()}>
+	<div
+		class="modal-backdrop"
+		role="button"
+		tabindex="-1"
+		onclick={(e) => {
+			if (e.target === e.currentTarget) showRoomMgr = false;
+		}}
+		onkeydown={(e) => {
+			if (e.key === 'Escape') showRoomMgr = false;
+		}}
+	>
+		<div class="modal room-mgr">
 			<div class="modal-title">管理房间</div>
 			<p class="muted mgr-hint">拖住 ⠿ 调整顺序，点击图标可设置房间图标，改名、切换室内/室外后点「保存修改」。</p>
 
-			<div class="room-list">
+			<div class="room-list" role="list">
 				{#each editRooms as r, i (r.id)}
 					<div
 						class="room-row"
 						class:dragging={dragIndex === i}
+						role="listitem"
 						ondragstart={(e) => dragStart(e, i)}
 						ondragover={(e) => dragOver(e, i)}
 						ondragend={() => {
@@ -390,7 +411,8 @@
 						}}
 						ondrop={(e) => e.preventDefault()}
 					>
-						<span
+						<button
+							type="button"
 							class="drag-handle"
 							title="拖动排序"
 							onpointerdown={handleDown}
@@ -399,7 +421,7 @@
 							onpointerleave={releaseDrag}
 						>
 							<Icon name="grip" size={16} />
-						</span>
+						</button>
 						<span class="room-order">{i + 1}</span>
 						<input class="room-name" bind:value={r.name} placeholder="名称" />
 						<label class="room-outdoor" title="室外（阳台/花园，降雨时自动推迟浇水）">

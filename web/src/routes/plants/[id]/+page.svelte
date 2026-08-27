@@ -277,17 +277,27 @@
 
 <!-- 编辑弹窗 -->
 {#if editing}
-	<div class="modal-backdrop" onclick={() => (editing = false)}>
-		<div class="modal" onclick={(e) => e.stopPropagation()}>
+	<div
+		class="modal-backdrop"
+		role="button"
+		tabindex="-1"
+		onclick={(e) => {
+			if (e.target === e.currentTarget) editing = false;
+		}}
+		onkeydown={(e) => {
+			if (e.key === 'Escape') editing = false;
+		}}
+	>
+		<div class="modal">
 			<div class="modal-title">编辑植物</div>
-			<div class="form-field"><label for="">名称</label><input bind:value={eName} /></div>
-			<div class="form-field"><label for="">品种</label><input bind:value={eSpecies} /></div>
-			<div class="form-field"><label for="">详细方位</label><input bind:value={eLocation} placeholder="如：阳台左侧" /></div>
-			<div class="form-field"><label for="">光照需求</label><input bind:value={eLightReq} placeholder="如：散射光 / 耐阴" /></div>
-			<div class="form-field"><label for="">获得日期</label><input bind:value={eAcquired} type="date" /></div>
-			<div class="form-field"><label for="">照片链接</label><input bind:value={ePhoto} /></div>
-			<div class="form-field"><label for="">备注</label><textarea bind:value={eNote} rows="2"></textarea></div>
-			<div class="form-field"><label for="">扩展属性(JSON)</label><textarea bind:value={eAttributes} rows="2" placeholder={'{"土壤":"泥炭土"}'}></textarea></div>
+			<div class="form-field"><label for="edit-name">名称</label><input id="edit-name" bind:value={eName} /></div>
+			<div class="form-field"><label for="edit-species">品种</label><input id="edit-species" bind:value={eSpecies} /></div>
+			<div class="form-field"><label for="edit-location">详细方位</label><input id="edit-location" bind:value={eLocation} placeholder="如：阳台左侧" /></div>
+			<div class="form-field"><label for="edit-light">光照需求</label><input id="edit-light" bind:value={eLightReq} placeholder="如：散射光 / 耐阴" /></div>
+			<div class="form-field"><label for="edit-acquired">获得日期</label><input id="edit-acquired" bind:value={eAcquired} type="date" /></div>
+			<div class="form-field"><label for="edit-photo">照片链接</label><input id="edit-photo" bind:value={ePhoto} /></div>
+			<div class="form-field"><label for="edit-note">备注</label><textarea id="edit-note" bind:value={eNote} rows="2"></textarea></div>
+			<div class="form-field"><label for="edit-attributes">扩展属性(JSON)</label><textarea id="edit-attributes" bind:value={eAttributes} rows="2" placeholder={'{"土壤":"泥炭土"}'}></textarea></div>
 			<div class="modal-actions">
 				<button class="btn btn-ghost" onclick={() => (editing = false)}>取消</button>
 				<button class="btn btn-primary" onclick={saveEdit}>保存</button>
@@ -298,12 +308,22 @@
 
 <!-- 新增任务弹窗 -->
 {#if showTaskForm}
-	<div class="modal-backdrop" onclick={() => (showTaskForm = false)}>
-		<div class="modal" onclick={(e) => e.stopPropagation()}>
+	<div
+		class="modal-backdrop"
+		role="button"
+		tabindex="-1"
+		onclick={(e) => {
+			if (e.target === e.currentTarget) showTaskForm = false;
+		}}
+		onkeydown={(e) => {
+			if (e.key === 'Escape') showTaskForm = false;
+		}}
+	>
+		<div class="modal">
 			<div class="modal-title">添加养护任务</div>
 			<div class="form-field">
-				<label for="">类型</label>
-				<div class="type-grid">
+				<div class="field-label" id="ptype-cap">类型</div>
+				<div class="type-grid" role="group" aria-labelledby="ptype-cap">
 					{#each TASK_TYPES as t}
 						<button
 							type="button"
@@ -317,8 +337,8 @@
 					{/each}
 				</div>
 			</div>
-			<div class="form-field"><label for="">标题（可选）</label><input bind:value={tTitle} placeholder="留空用类型名" /></div>
-			<div class="form-field"><label for="">周期（天）</label><input type="number" bind:value={tInterval} /></div>
+			<div class="form-field"><label for="ptask-title">标题（可选）</label><input id="ptask-title" bind:value={tTitle} placeholder="留空用类型名" /></div>
+			<div class="form-field"><label for="ptask-interval">周期（天）</label><input id="ptask-interval" type="number" bind:value={tInterval} /></div>
 			<div class="modal-actions">
 				<button class="btn btn-ghost" onclick={() => (showTaskForm = false)}>取消</button>
 				<button class="btn btn-primary" onclick={submitTask}>保存</button>

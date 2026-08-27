@@ -195,12 +195,12 @@
 		{/if}
 	{:else}
 		<div class="card">
-			<label>来源植物（复制其任务配置）</label>
-			<select bind:value={sourceId}>
+			<label for="tpl-source">来源植物（复制其任务配置）</label>
+			<select id="tpl-source" bind:value={sourceId}>
 				{#each plants as p}<option value={p.id}>{p.name}</option>{/each}
 			</select>
-			<label class="mt">目标植物（勾选要应用模板的植物）</label>
-			<div class="checks">
+			<div class="mt field-label" id="tpl-target">目标植物（勾选要应用模板的植物）</div>
+			<div class="checks" role="group" aria-labelledby="tpl-target">
 				{#each plants as p}
 					<label class="chk"><input type="checkbox" checked={targetSel.has(p.id)} onchange={() => toggleTarget(p.id)} /> {p.name}</label>
 				{/each}
