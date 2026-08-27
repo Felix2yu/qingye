@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { page } from '$app/stores';
+	import { page } from '$app/state';
 	import Icon from './Icon.svelte';
 	import ThemeToggle from './ThemeToggle.svelte';
 	import { theme, THEME_MODE_LABEL } from '$lib/theme.svelte';
@@ -15,7 +15,7 @@
 	];
 
 	function isActive(href: string): boolean {
-		const path = $page.url.pathname;
+		const path = page.url.pathname;
 		if (href === '/') return path === '/';
 		return path === href || path.startsWith(href + '/');
 	}

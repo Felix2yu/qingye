@@ -1,23 +1,3 @@
-import { writable } from 'svelte/store';
-import { browser } from '$app/environment';
-import { api, type UserSetting } from './api';
-
-// 全局设置（工作日、偏好），供多个页面读取
-export const settings = writable<UserSetting | null>(null);
-
-export async function loadSettings() {
-	if (!browser) return;
-	try {
-		settings.set(await api.getSettings());
-	} catch {
-		/* 忽略加载失败 */
-	}
-}
-
-// 简单 toast 提示
-export const toast = writable<{ id: number; text: string; type: 'ok' | 'err' | 'info' } | null>(null);
-
-export function showToast(text: string, type: 'ok' | 'err' | 'info' = 'ok') {
-	toast.set({ id: Date.now(), text, type });
-	setTimeout(() => toast.set(null), 2400);
-}
+// 公共入口：runes 实现位于 stores.svelte.ts（Svelte 5 模块）。
+// 本文件仅做 re-export，使 '$lib/stores' 在 TS / svelte-check 下可正常解析。
+export * from './stores.svelte';

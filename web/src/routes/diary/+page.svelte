@@ -5,7 +5,7 @@
 	import { showToast } from '$lib/stores';
 	import { compressImage } from '$lib/compress';
 	import DiaryTimeline from '$lib/components/DiaryTimeline.svelte';
-	import { page } from '$app/stores';
+	import { page } from '$app/state';
 
 	let items = $state<PhotoDiary[]>([]);
 	let plants = $state<Plant[]>([]);
@@ -88,7 +88,7 @@
 	}
 
 	onMount(() => {
-		const q = $page.url.searchParams.get('plantId');
+		const q = page.url.searchParams.get('plantId');
 		if (q) plantFilter = Number(q);
 		load();
 	});

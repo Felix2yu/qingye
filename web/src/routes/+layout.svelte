@@ -36,9 +36,9 @@
 	{@render children()}
 </main>
 
-{#if $toast}
-	<div class="toast {$toast.type}" transition:fly={{ y: 20, duration: 200 }}>
-		{$toast.text}
+{#if toast.current}
+	<div class="toast {toast.current.type}" transition:fly={{ y: 20, duration: 200 }}>
+		{toast.current.text}
 	</div>
 {/if}
 

@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
-	import { page } from '$app/stores';
+	import { page } from '$app/state';
 	import { api, imgUrl } from '$lib/api';
 	import type { Plant, Task, PhotoDiary, CareLog } from '$lib/api';
 	import { dueLabel, TASK_TYPES, TASK_TYPE_EMOJI, TASK_TYPE_LABEL, formatDate, formatDateTime, careTypeLabel, fmtDate } from '$lib/format';
@@ -8,7 +8,7 @@
 	import { showToast } from '$lib/stores';
 	import { goto } from '$app/navigation';
 
-	const id = Number($page.params.id);
+	const id = Number(page.params.id);
 
 	let plant = $state<Plant | null>(null);
 	let tasks = $state<Task[]>([]);
