@@ -61,9 +61,12 @@ func setupTest(t *testing.T) *gin.Engine {
 
 	taskH := NewTaskHandler()
 	api.GET("/tasks", taskH.List)
+	api.GET("/tasks/today", taskH.Today)
+	api.GET("/tasks/upcoming", taskH.Upcoming)
 	api.POST("/tasks", taskH.Create)
 	api.POST("/tasks/:id/done", taskH.Done)
 	api.POST("/tasks/:id/postpone", taskH.Postpone)
+	api.GET("/tasks/:id/logs", taskH.Logs)
 	api.DELETE("/tasks/:id", taskH.Delete)
 
 	careH := NewCareLogHandler()
@@ -81,10 +84,21 @@ func setupTest(t *testing.T) *gin.Engine {
 
 	libH := NewLibraryHandler(&config.Config{})
 	api.GET("/library", libH.Search)
+	api.GET("/library/online", libH.SearchOnline)
+	api.POST("/library/import", libH.ImportOnline)
+	api.POST("/library/sync-popular", libH.SyncPopular)
 
 	weatherH := NewWeatherHandler()
 	api.GET("/weather/config", weatherH.GetConfig)
 	api.PUT("/weather/config", weatherH.SaveConfig)
+	api.GET("/weather/current", weatherH.Current)
+	api.GET("/weather/logs", weatherH.Logs)
+	api.POST("/weather/refresh", weatherH.Refresh)
+
+	notifyH := NewNotifyHandler()
+	api.PUT("/settings/notify", notifyH.SaveNotify)
+	api.PUT("/settings/digest-hour", notifyH.SaveDigestHour)
+	api.POST("/notify/test", notifyH.Test)
 
 	importH := NewImportHandler()
 	api.POST("/import/preview", importH.Preview)
@@ -589,5 +603,42 @@ func TestIntegration_RoomUpdate(t *testing.T) {
 	w = perform(r, "PUT", fmt.Sprintf("/api/rooms/%d", roomID), map[string]any{"name": "新客厅"})
 	if w.Code != 200 {
 		t.Fatalf("update: %d", w.Code)
+	}
+}
+
+func TestIntegration_RoomIcon(t *testing.T) {
+	r := setupTest(t)
+
+	// 创建时携带 icon
+	w := perform(r, "POST", "/api/rooms", map[string]any{"name": "阳台", "icon": "sun"})
+	if w.Code != 200 {
+		t.Fatalf("create: %d %s", w.Code, w.Body.String())
+	}
+	resp := decodeJSON(t, w)
+	data := resp["data"].(map[string]any)
+	if data["icon"] != "sun" {
+		t.Errorf("create icon = %v, want sun", data["icon"])
+	}
+	roomID := int(data["id"].(float64))
+
+	// 更新 icon
+	w = perform(r, "PUT", fmt.Sprintf("/api/rooms/%d", roomID), map[string]any{"name": "阳台", "icon": "house"})
+	if w.Code != 200 {
+		t.Fatalf("update: %d", w.Code)
+	}
+
+	// 列表验证持久化
+	w = perform(r, "GET", "/api/rooms", nil)
+	if w.Code != 200 {
+		t.Fatalf("list: %d", w.Code)
+	}
+	resp = decodeJSON(t, w)
+	list := resp["data"].([]any)
+	if len(list) != 1 {
+		t.Fatalf("rooms = %d, want 1", len(list))
+	}
+	got := list[0].(map[string]any)
+	if got["icon"] != "house" {
+		t.Errorf("list icon = %v, want house", got["icon"])
 	}
 }

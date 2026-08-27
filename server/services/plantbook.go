@@ -16,7 +16,7 @@ import (
 	"qingye/server/models"
 )
 
-const plantbookBaseURL = "https://open.plantbook.io/api/v1"
+var plantbookBaseURL = "https://open.plantbook.io/api/v1"
 
 // PlantbookClient 封装 Plantbook 在线植物资料 API。
 // 设计要点：

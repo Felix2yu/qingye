@@ -75,6 +75,41 @@ func TestRoomRepo_Update_Delete(t *testing.T) {
 	}
 }
 
+func TestRoomRepo_Icon(t *testing.T) {
+	setup(t)
+	repo := NewRoomRepo()
+
+	r := &models.Room{Name: "阳台", Sort: 1, Icon: "sun"}
+	if err := repo.Create(r); err != nil {
+		t.Fatal(err)
+	}
+	if r.Icon != "sun" {
+		t.Errorf("create icon = %q, want sun", r.Icon)
+	}
+
+	// List 往返校验
+	list, err := repo.List()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(list) != 1 {
+		t.Fatalf("rooms = %d, want 1", len(list))
+	}
+	if list[0].Icon != "sun" {
+		t.Errorf("list icon = %q, want sun", list[0].Icon)
+	}
+
+	// 更新 icon
+	r.Icon = "house"
+	if err := repo.Update(r); err != nil {
+		t.Fatal(err)
+	}
+	list, _ = repo.List()
+	if list[0].Icon != "house" {
+		t.Errorf("after update icon = %q, want house", list[0].Icon)
+	}
+}
+
 // ---- Plant ----
 
 func TestPlantRepo_Create_Get_List(t *testing.T) {

@@ -1,5 +1,25 @@
+import { readFileSync } from 'fs';
+import { resolve, dirname } from 'path';
+import { fileURLToPath } from 'url';
 import { describe, it, expect } from 'vitest';
-import { formatDate, formatDateTime, dueLabel, careTypeLabel, fmtDate, TASK_TYPE_LABEL, CARE_TYPE_LABEL } from './format';
+import {
+	formatDate,
+	formatDateTime,
+	dueLabel,
+	careTypeLabel,
+	fmtDate,
+	TASK_TYPE_LABEL,
+	CARE_TYPE_LABEL,
+	TASK_TYPES,
+	ROOM_ICONS
+} from './format';
+
+// 提取 Icon.svelte 中已注册的图标名，用于校验数据源引用了真实存在的图标
+const __dirname = dirname(fileURLToPath(import.meta.url));
+const iconSrc = readFileSync(resolve(__dirname, './components/Icon.svelte'), 'utf-8');
+const registeredIcons = new Set<string>(
+	[...iconSrc.matchAll(/\n\t{2}([a-zA-Z0-9_]+):/g)].map((m) => m[1])
+);
 
 describe('formatDate', () => {
 	it('格式化日期', () => {
@@ -117,5 +137,52 @@ describe('CARE_TYPE_LABEL', () => {
 		expect(CARE_TYPE_LABEL.water).toBe('浇水');
 		expect(CARE_TYPE_LABEL.prune).toBe('修剪');
 		expect(CARE_TYPE_LABEL.other).toBe('其他');
+	});
+});
+
+describe('TASK_TYPES', () => {
+	it('包含全部 8 种任务类型且顺序正确', () => {
+		expect(TASK_TYPES.map((t) => t.value)).toEqual([
+			'water',
+			'fertilize',
+			'mist',
+			'repot',
+			'prune',
+			'clean',
+			'pesticide',
+			'other'
+		]);
+	});
+
+	it('label 与 TASK_TYPE_LABEL 保持一致', () => {
+		for (const t of TASK_TYPES) {
+			expect(TASK_TYPE_LABEL[t.value]).toBe(t.label);
+		}
+	});
+
+	it('icon 名均在 Icon.svelte 中已注册', () => {
+		for (const t of TASK_TYPES) {
+			expect(registeredIcons.has(t.icon)).toBe(true);
+		}
+	});
+});
+
+describe('ROOM_ICONS', () => {
+	it('包含常见房间类型（房间/客厅/卧室/阳台露台/花园/花架）', () => {
+		const values = ROOM_ICONS.map((r) => r.value);
+		for (const v of ['house', 'sofa', 'bed', 'sun', 'trees', 'flower2']) {
+			expect(values).toContain(v);
+		}
+	});
+
+	it('value 唯一', () => {
+		const values = ROOM_ICONS.map((r) => r.value);
+		expect(new Set(values).size).toBe(values.length);
+	});
+
+	it('icon 名均在 Icon.svelte 中已注册', () => {
+		for (const r of ROOM_ICONS) {
+			expect(registeredIcons.has(r.value)).toBe(true);
+		}
 	});
 });
