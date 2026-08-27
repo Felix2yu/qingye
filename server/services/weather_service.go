@@ -151,6 +151,9 @@ func (s *WeatherService) applyStrategy(cfg models.WeatherConfig, now *WeatherNow
 	}
 	isRain := isRaining(now.Condition, now.Icon)
 
+	// 收集本次调整要点，用于推送通知（仅在有调整时发送）
+	var notes []string
+
 	// 温度类别
 	kind := "normal"
 	if now.Temp < cfg.ColdTemp {
@@ -206,16 +209,24 @@ func (s *WeatherService) applyStrategy(cfg models.WeatherConfig, now *WeatherNow
 			At: time.Now(), Temp: now.Temp, Condition: now.Condition,
 			Kind: kind, TaskID: &t.ID, PlantID: &t.PlantID, Detail: detail,
 		})
+		notes = append(notes, detail)
 	}
 
 	// 降雨：推迟室外植物浇水任务
 	if isRain {
-		s.deferOutdoorWatering(cfg, now)
+		s.deferOutdoorWatering(cfg, now, &notes)
+	}
+
+	// 有调整时推送天气通知（节流由 NotifyService 内部处理）
+	if len(notes) > 0 {
+		msg := fmt.Sprintf("🌤️ 青野集天气养护调整（%s %.1f°C）\n%s",
+			now.Condition, now.Temp, strings.Join(notes, "\n"))
+		NewNotifyService().WeatherAlert(msg)
 	}
 }
 
 // deferOutdoorWatering 降雨时推迟室外植物（Room.IsOutdoor）的浇水任务
-func (s *WeatherService) deferOutdoorWatering(cfg models.WeatherConfig, now *WeatherNow) {
+func (s *WeatherService) deferOutdoorWatering(cfg models.WeatherConfig, now *WeatherNow, notes *[]string) {
 	plants, err := repositories.NewPlantRepo().List(0)
 	if err != nil {
 		return
@@ -242,6 +253,9 @@ func (s *WeatherService) deferOutdoorWatering(cfg models.WeatherConfig, now *Wea
 					Kind: models.WeatherKindRain, TaskID: &t.ID, PlantID: &p.ID,
 					Detail: fmt.Sprintf("降雨(%s)：室外植物 %s 的浇水任务推迟 %d 小时", now.Condition, p.Name, cfg.RainDelayH),
 				})
+				if notes != nil {
+					*notes = append(*notes, fmt.Sprintf("🌧️ %s 浇水推迟 %d 小时", p.Name, cfg.RainDelayH))
+				}
 			}
 		}
 	}

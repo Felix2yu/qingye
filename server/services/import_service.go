@@ -450,15 +450,25 @@ func (s *ImportService) ensureRoom(name string) (*models.Room, error) {
 }
 
 // normalizeTaskType 将用户输入的任务类型归一化为系统常量
-// 系统支持：water(浇水) / fertilize(施肥) / repot(换盆)
+// 系统支持：water(浇水) / fertilize(施肥) / mist(喷雾) / repot(换盆) / prune(修剪) / clean(清理) / pesticide(除虫) / other(其他)
 func normalizeTaskType(raw string) (string, bool) {
 	switch raw {
-	case "water", "浇水":
+	case TaskTypeWater, "浇水":
 		return TaskTypeWater, true
-	case "fertilize", "施肥":
+	case TaskTypeFertilize, "施肥":
 		return TaskTypeFertilize, true
-	case "repot", "换盆":
+	case TaskTypeMist, "喷雾":
+		return TaskTypeMist, true
+	case TaskTypeRepot, "换盆":
 		return TaskTypeRepot, true
+	case TaskTypePrune, "修剪":
+		return TaskTypePrune, true
+	case TaskTypeClean, "清理":
+		return TaskTypeClean, true
+	case TaskTypePesticide, "除虫":
+		return TaskTypePesticide, true
+	case TaskTypeOther, "其他":
+		return TaskTypeOther, true
 	}
 	return "", false
 }

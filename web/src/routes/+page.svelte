@@ -59,7 +59,7 @@
 	}
 </script>
 
-<svelte:head><title>青野 · 今日</title></svelte:head>
+<svelte:head><title>青野集 · 今日</title></svelte:head>
 
 <div class="page">
 	<div class="hero">

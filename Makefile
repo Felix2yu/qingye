@@ -5,7 +5,7 @@ SERVER_PORT ?= 8081
 WEB_PORT ?= 5173
 
 help: ## 查看可用命令
-	@echo "青野 QingYe 开发命令："
+	@echo "青野集 QingYe 开发命令："
 	@echo "  make install-server  安装后端依赖"
 	@echo "  make install-web     安装前端依赖"
 	@echo "  make run-server      启动后端 (http://localhost:8081)"

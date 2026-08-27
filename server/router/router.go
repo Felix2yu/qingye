@@ -70,6 +70,12 @@ func Setup(r *gin.Engine, cfg *config.Config) {
 	api.GET("/settings", settingH.Get)
 	api.PUT("/settings", settingH.Update)
 
+	// 通知（shoutrrr）
+	notifyH := handlers.NewNotifyHandler()
+	api.PUT("/settings/notify", notifyH.SaveNotify)
+	api.PUT("/settings/digest-hour", notifyH.SaveDigestHour)
+	api.POST("/notify/test", notifyH.Test)
+
 	// 天气与智能养护
 	weatherH := handlers.NewWeatherHandler()
 	api.GET("/weather/current", weatherH.Current)

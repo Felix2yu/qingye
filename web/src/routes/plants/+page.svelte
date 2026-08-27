@@ -262,7 +262,7 @@
 		}
 	}</script>
 
-<svelte:head><title>青野 · 植物</title></svelte:head>
+<svelte:head><title>青野集 · 植物</title></svelte:head>
 
 <div class="page">
 	<div class="head">

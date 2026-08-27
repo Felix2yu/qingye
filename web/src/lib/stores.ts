@@ -15,9 +15,9 @@ export async function loadSettings() {
 }
 
 // 简单 toast 提示
-export const toast = writable<{ id: number; text: string; type: 'ok' | 'err' } | null>(null);
+export const toast = writable<{ id: number; text: string; type: 'ok' | 'err' | 'info' } | null>(null);
 
-export function showToast(text: string, type: 'ok' | 'err' = 'ok') {
+export function showToast(text: string, type: 'ok' | 'err' | 'info' = 'ok') {
 	toast.set({ id: Date.now(), text, type });
 	setTimeout(() => toast.set(null), 2400);
 }

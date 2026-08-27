@@ -25,7 +25,7 @@
 <aside class="sidebar">
 	<div class="brand">
 		<span class="logo"><Icon name="sprout" size={26} /></span>
-		<span class="brand-name">青野</span>
+		<span class="brand-name">青野集</span>
 	</div>
 	<nav>
 		{#each items as it}

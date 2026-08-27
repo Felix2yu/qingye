@@ -87,7 +87,7 @@
 	onMount(() => search(''));
 </script>
 
-<svelte:head><title>青野 · 资料库</title></svelte:head>
+<svelte:head><title>青野集 · 资料库</title></svelte:head>
 
 <div class="page">
 	<h1 class="page-title">植物资料库</h1>

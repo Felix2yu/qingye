@@ -1,5 +1,9 @@
 // 与后端统一响应结构 {code, message, data} 对应的封装
 
+import { browser } from '$app/environment';
+import { showToast } from './stores';
+import { enqueue, prepareRequest } from './offline';
+
 export interface ApiResponse<T> {
 	code: number;
 	message: string;
@@ -103,6 +107,8 @@ export interface UserSetting {
 	id: number;
 	workdays: string; // "1,2,3,4,5"
 	prefs: string; // JSON
+	notifyURL: string; // shoutrrr URL，为空表示未开启通知
+	digestHour: number; // 每日摘要推送小时（0-23）
 }
 
 export interface DiaryPage {
@@ -114,17 +120,47 @@ export interface DiaryPage {
 
 const BASE = (import.meta.env.VITE_API_BASE as string | undefined) ?? '';
 
+// 把 JSON 请求体解析回对象，作为离线占位返回值（调用方不依赖其做跳转）
+function parseBodyPlaceholder(body?: BodyInit | null): unknown {
+	if (!body || typeof body !== 'string') return {};
+	try {
+		return JSON.parse(body);
+	} catch {
+		return {};
+	}
+}
+
 async function request<T>(path: string, options?: RequestInit): Promise<T> {
 	const isForm = options?.body instanceof FormData;
-	const res = await fetch(`${BASE}${path}`, {
-		headers: isForm ? undefined : { 'Content-Type': 'application/json' },
-		...options
-	});
-	const json = (await res.json().catch(() => null)) as ApiResponse<T> | null;
-	if (!res.ok || !json || json.code !== 0) {
-		throw new Error(json?.message || `请求失败 (${res.status})`);
+	const method = options?.method ?? 'GET';
+	const isMutation = method !== 'GET' && method !== 'HEAD';
+	const url = `${BASE}${path}`;
+	try {
+		const res = await fetch(url, {
+			headers: isForm ? undefined : { 'Content-Type': 'application/json' },
+			...options
+		});
+		const json = (await res.json().catch(() => null)) as ApiResponse<T> | null;
+		if (!res.ok || !json || json.code !== 0) {
+			throw new Error(json?.message || `请求失败 (${res.status})`);
+		}
+		return json.data;
+	} catch (err) {
+		// 仅在“断网”时把写操作写入离线队列，其余错误原样抛出
+		if (isMutation && browser && !navigator.onLine) {
+			try {
+				const prepared = prepareRequest(method, url, options);
+				await enqueue(prepared);
+				showToast('已离线保存，联网后自动同步', 'info');
+				// 返回占位对象，让调用方走成功分支（其不依赖返回值做跳转）
+				return (isForm ? undefined : parseBodyPlaceholder(options?.body)) as T;
+			} catch {
+				// 队列不可用（如隐私模式禁用 IndexedDB）时退回原始错误
+				throw err;
+			}
+		}
+		throw err;
 	}
-	return json.data;
 }
 
 export const api = {
@@ -231,6 +267,21 @@ export const api = {
 		request<UserSetting>('/api/settings', {
 			method: 'PUT',
 			body: JSON.stringify({ workdays, prefs })
+		}),
+	// 通知
+	saveNotify: (url: string) =>
+		request<UserSetting>('/api/settings/notify', {
+			method: 'PUT',
+			body: JSON.stringify({ url })
+		}),
+	saveDigestHour: (hour: number) =>
+		request<UserSetting>('/api/settings/digest-hour', {
+			method: 'PUT',
+			body: JSON.stringify({ hour })
+		}),
+	testNotify: () =>
+		request<{ message: string }>('/api/notify/test', {
+			method: 'POST'
 		}),
 
 	// ---- 批量导入 ----

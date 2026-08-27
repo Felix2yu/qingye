@@ -112,3 +112,53 @@ func (s *SettingService) IsWorkday(day time.Time) (bool, error) {
 	}
 	return ParseWorkdays(st.Workdays)[WeekdayToInt(day.Weekday())], nil
 }
+
+// NotifyURL 读取当前配置的通知地址（shoutrrr URL）
+func (s *SettingService) NotifyURL() (string, error) {
+	st, err := s.repo.Get()
+	if err != nil {
+		return "", err
+	}
+	return st.NotifyURL, nil
+}
+
+// SaveNotifyURL 仅更新通知地址（shoutrrr URL），不影响工作日与偏好
+func (s *SettingService) SaveNotifyURL(url string) (*models.UserSetting, error) {
+	st, err := s.repo.Get()
+	if err != nil {
+		return nil, err
+	}
+	st.NotifyURL = url
+	if err := s.repo.Save(st); err != nil {
+		return nil, err
+	}
+	return st, nil
+}
+
+// DigestHour 读取当前配置的每日摘要推送小时（0-23）；非法值回退到 8
+func (s *SettingService) DigestHour() int {
+	st, err := s.repo.Get()
+	if err != nil {
+		return 8
+	}
+	if st.DigestHour < 0 || st.DigestHour > 23 {
+		return 8
+	}
+	return st.DigestHour
+}
+
+// SaveDigestHour 仅更新每日摘要推送小时（0-23），保存后由调用方触发调度器重排
+func (s *SettingService) SaveDigestHour(hour int) (*models.UserSetting, error) {
+	if hour < 0 || hour > 23 {
+		return nil, errors.New("推送时间须在 0-23 小时之间")
+	}
+	st, err := s.repo.Get()
+	if err != nil {
+		return nil, err
+	}
+	st.DigestHour = hour
+	if err := s.repo.Save(st); err != nil {
+		return nil, err
+	}
+	return st, nil
+}

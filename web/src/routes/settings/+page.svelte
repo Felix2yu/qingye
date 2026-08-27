@@ -37,6 +37,14 @@
 	let wLogs = $state<WeatherLog[]>([]);
 	let showLogs = $state(false);
 
+	// 通知
+	let notifyURL = $state('');
+	let notifySaving = $state(false);
+	let notifyTesting = $state(false);
+	let notifyMsg = $state('');
+	let digestHour = $state(8);
+	let digestSaving = $state(false);
+
 	function toggle(d: number) {
 		if (selected.includes(d)) {
 			selected = selected.filter((x) => x !== d);
@@ -50,6 +58,8 @@
 		try {
 			const [s, wc] = await Promise.all([api.getSettings(), api.getWeatherConfig()]);
 			settings.set(s);
+			notifyURL = s.notifyURL ?? '';
+			digestHour = s.digestHour ?? 8;
 			selected = s.workdays
 				? s.workdays
 						.split(',')
@@ -136,9 +146,54 @@
 	}
 
 	onMount(load);
+
+	// ---- 通知 ----
+	async function saveNotify() {
+		notifyMsg = '';
+		notifySaving = true;
+		try {
+			const s = await api.saveNotify(notifyURL.trim());
+			settings.set(s);
+			notifyURL = s.notifyURL ?? '';
+			showToast(notifyURL ? '通知已保存 🔔' : '已关闭通知');
+		} catch (e) {
+			showToast((e as Error).message, 'err');
+		} finally {
+			notifySaving = false;
+		}
+	}
+
+	async function testNotify() {
+		notifyMsg = '';
+		notifyTesting = true;
+		try {
+			const r = await api.testNotify();
+			notifyMsg = r.message;
+			showToast(r.message);
+		} catch (e) {
+			notifyMsg = (e as Error).message;
+			showToast((e as Error).message, 'err');
+		} finally {
+			notifyTesting = false;
+		}
+	}
+
+	async function saveDigestHour() {
+		digestSaving = true;
+		try {
+			const s = await api.saveDigestHour(Number(digestHour));
+			settings.set(s);
+			digestHour = s.digestHour ?? 8;
+			showToast(`每日推送时间已设为 ${String(digestHour).padStart(2, '0')}:00 🔔`);
+		} catch (e) {
+			showToast((e as Error).message, 'err');
+		} finally {
+			digestSaving = false;
+		}
+	}
 </script>
 
-<svelte:head><title>青野 · 设置</title></svelte:head>
+<svelte:head><title>青野集 · 设置</title></svelte:head>
 
 <div class="page">
 	<h1 class="page-title">设置</h1>
@@ -288,8 +343,48 @@
 	</div>
 
 	<div class="card setting-card">
+		<div class="setting-title">🔔 通知推送</div>
+		<p class="muted">
+			填写 <a href="https://containrrr.dev/shoutrrr/" target="_blank" rel="noreferrer">shoutrrr</a>
+			服务地址，即可接收养护提醒与天气策略调整通知。支持 Gotify、Telegram、企业微信、钉钉、Bark、Webhook、SMTP 等。留空表示不推送。
+		</p>
+		<div class="form-field notify-field">
+			<label for="">shoutrrr URL</label>
+			<input
+				id="notify"
+				bind:value={notifyURL}
+				placeholder="例如：gotify://gotify.example.com/AaBbCcDdEeFf"
+				spellcheck="false"
+				autocomplete="off"
+			/>
+		</div>
+		{#if notifyMsg}
+			<p class="muted notify-msg">{notifyMsg}</p>
+		{/if}
+		<div class="digest-row">
+			<label for="digest-hour">每日养护摘要推送时间</label>
+			<select id="digest-hour" bind:value={digestHour}>
+				{#each Array.from({ length: 24 }, (_, h) => h) as h}
+					<option value={h}>{String(h).padStart(2, '0')}:00</option>
+				{/each}
+			</select>
+			<button class="btn btn-ghost btn-sm" onclick={saveDigestHour} disabled={digestSaving}>
+				{digestSaving ? '保存中…' : '保存时间'}
+			</button>
+		</div>
+		<div class="setting-actions">
+			<button class="btn btn-ghost" onclick={testNotify} disabled={notifyTesting || !notifyURL.trim()}>
+				{notifyTesting ? '发送中…' : '发送测试'}
+			</button>
+			<button class="btn btn-primary" onclick={saveNotify} disabled={notifySaving}>
+				{notifySaving ? '保存中…' : notifyURL.trim() ? '保存通知' : '关闭通知'}
+			</button>
+		</div>
+	</div>
+
+	<div class="card setting-card">
 		<div class="setting-title">关于</div>
-		<p class="muted">青野 · 家庭园艺植物记录与养护应用</p>
+		<p class="muted">青野集 · 家庭园艺植物记录与养护</p>
 	</div>
 </div>
 
@@ -450,5 +545,31 @@
 	}
 	.log-time {
 		flex-shrink: 0;
+	}
+	.notify-field {
+		margin: 14px 0 4px;
+	}
+	.notify-field input {
+		font-family: var(--mono, ui-monospace, SFMono-Regular, Menlo, monospace);
+		font-size: 13px;
+	}
+	.notify-msg {
+		margin: 6px 0 0;
+		word-break: break-all;
+	}
+	.digest-row {
+		display: flex;
+		align-items: center;
+		gap: 10px;
+		flex-wrap: wrap;
+		margin: 14px 0 4px;
+	}
+	.digest-row label {
+		font-size: 13px;
+		color: var(--text-secondary);
+	}
+	.digest-row select {
+		width: auto;
+		min-width: 96px;
 	}
 </style>

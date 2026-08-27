@@ -24,7 +24,12 @@
 		{ value: '', label: '全部' },
 		{ value: 'water', label: '💧 浇水' },
 		{ value: 'fertilize', label: '🌱 施肥' },
-		{ value: 'repot', label: '🪴 换盆' }
+		{ value: 'mist', label: '🌫️ 喷雾' },
+		{ value: 'repot', label: '🪴 换盆' },
+		{ value: 'prune', label: '✂️ 修剪' },
+		{ value: 'clean', label: '🧹 清理' },
+		{ value: 'pesticide', label: '🐛 除虫' },
+		{ value: 'other', label: '✨ 其他' }
 	];
 
 	async function load() {
@@ -72,7 +77,7 @@
 	onMount(load);
 </script>
 
-<svelte:head><title>青野 · 任务</title></svelte:head>
+<svelte:head><title>青野集 · 任务</title></svelte:head>
 
 <div class="page">
 	<div class="head">
@@ -125,7 +130,12 @@
 				<select bind:value={fType}>
 					<option value="water">💧 浇水</option>
 					<option value="fertilize">🌱 施肥</option>
+					<option value="mist">🌫️ 喷雾</option>
 					<option value="repot">🪴 换盆</option>
+					<option value="prune">✂️ 修剪</option>
+					<option value="clean">🧹 清理</option>
+					<option value="pesticide">🐛 除虫</option>
+					<option value="other">✨ 其他</option>
 				</select>
 			</div>
 			<div class="form-field"><label for="">标题（可选）</label><input bind:value={fTitle} placeholder="留空用类型名" /></div>

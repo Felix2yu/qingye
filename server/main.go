@@ -55,6 +55,9 @@ func main() {
 	// 后台天气轮询：依据实时天气调整养护策略（未配置 QWEATHER_KEY 时自动跳过）
 	services.StartWeatherScheduler()
 
+	// 后台通知：每日推送「今日养护任务」摘要（未配置通知地址时自动跳过）
+	services.StartNotifier()
+
 	if os.Getenv("GIN_MODE") == "release" {
 		gin.SetMode(gin.ReleaseMode)
 	}

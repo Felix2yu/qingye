@@ -145,7 +145,7 @@
 	onMount(load);
 </script>
 
-<svelte:head><title>青野 · 植物详情</title></svelte:head>
+<svelte:head><title>青野集 · 植物详情</title></svelte:head>
 
 <div class="page">
 	{#if loading}
@@ -232,7 +232,11 @@
 					<select bind:value={cType}>
 						<option value="water">💧 浇水</option>
 						<option value="fertilize">🌱 施肥</option>
+						<option value="mist">🌫️ 喷雾</option>
 						<option value="repot">🪴 换盆</option>
+						<option value="prune">✂️ 修剪</option>
+						<option value="clean">🧹 清理</option>
+						<option value="pesticide">🐛 除虫</option>
 						<option value="other">✨ 其他</option>
 					</select>
 				</div>
@@ -298,7 +302,12 @@
 				<select bind:value={tType}>
 					<option value="water">💧 浇水</option>
 					<option value="fertilize">🌱 施肥</option>
+					<option value="mist">🌫️ 喷雾</option>
 					<option value="repot">🪴 换盆</option>
+					<option value="prune">✂️ 修剪</option>
+					<option value="clean">🧹 清理</option>
+					<option value="pesticide">🐛 除虫</option>
+					<option value="other">✨ 其他</option>
 				</select>
 			</div>
 			<div class="form-field"><label for="">标题（可选）</label><input bind:value={tTitle} placeholder="留空用类型名" /></div>

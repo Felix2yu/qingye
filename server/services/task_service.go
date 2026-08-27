@@ -14,7 +14,12 @@ import (
 const (
 	TaskTypeWater     = "water"
 	TaskTypeFertilize = "fertilize"
+	TaskTypeMist      = "mist"
 	TaskTypeRepot     = "repot"
+	TaskTypePrune     = "prune"
+	TaskTypeClean     = "clean"
+	TaskTypePesticide = "pesticide"
+	TaskTypeOther     = "other"
 )
 
 // 任务动作
@@ -26,7 +31,12 @@ const (
 var taskTypeNames = map[string]string{
 	TaskTypeWater:     "浇水",
 	TaskTypeFertilize: "施肥",
+	TaskTypeMist:      "喷雾",
 	TaskTypeRepot:     "换盆",
+	TaskTypePrune:     "修剪",
+	TaskTypeClean:     "清理",
+	TaskTypePesticide: "除虫",
+	TaskTypeOther:     "其他",
 }
 
 // TaskTypeName 返回任务类型中文名

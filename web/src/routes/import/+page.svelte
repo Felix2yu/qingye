@@ -127,10 +127,10 @@
 	}
 
 	const samplePlants = 'name,species,room,note,location,lightReq,acquiredDate\n龟背竹,Monstera deliciosa,客厅,喜散射光,阳台左侧,散射光,2026-05-01\n绿萝,,卧室,耐阴,,耐阴,';
-	const sampleTasks = 'plant,type,intervalDays,title,startDate\n龟背竹,water,7,浇水,2026-09-01\n绿萝,fertilize,30,施肥,';
+	const sampleTasks = 'plant,type,intervalDays,title,startDate\n龟背竹,water,7,浇水,2026-09-01\n绿萝,fertilize,30,施肥,\n薄荷,prune,14,修剪,\n月季,pesticide,21,除虫,';
 </script>
 
-<svelte:head><title>批量导入 · 青野</title></svelte:head>
+<svelte:head><title>批量导入 · 青野集</title></svelte:head>
 
 <div class="wrap">
 	<h1>批量导入</h1>
@@ -155,7 +155,7 @@
 			<div class="sample">
 				表头示例：
 				<code>{mode === 'plants' ? samplePlants : sampleTasks}</code>
-				<span class="hint">任务类型取值：water(浇水) / fertilize(施肥) / repot(换盆)</span>
+				<span class="hint">任务类型取值：water(浇水) / fertilize(施肥) / mist(喷雾) / repot(换盆) / prune(修剪) / clean(清理) / pesticide(除虫) / other(其他)</span>
 			</div>
 		</div>
 

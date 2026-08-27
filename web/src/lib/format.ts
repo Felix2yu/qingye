@@ -40,21 +40,34 @@ export function greeting(): string {
 export const TASK_TYPE_LABEL: Record<string, string> = {
 	water: '浇水',
 	fertilize: '施肥',
-	repot: '换盆'
+	mist: '喷雾',
+	repot: '换盆',
+	prune: '修剪',
+	clean: '清理',
+	pesticide: '除虫',
+	other: '其他'
 };
 
 export const TASK_TYPE_EMOJI: Record<string, string> = {
 	water: '💧',
 	fertilize: '🌱',
-	repot: '🪴'
+	mist: '🌫️',
+	repot: '🪴',
+	prune: '✂️',
+	clean: '🧹',
+	pesticide: '🐛',
+	other: '✨'
 };
 
-// 养护事件类型中文映射（含 other / prune）
+// 养护事件类型中文映射（与任务类型保持一致）
 export const CARE_TYPE_LABEL: Record<string, string> = {
 	water: '浇水',
 	fertilize: '施肥',
+	mist: '喷雾',
 	repot: '换盆',
 	prune: '修剪',
+	clean: '清理',
+	pesticide: '除虫',
 	other: '其他'
 };
 
