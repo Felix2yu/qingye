@@ -159,9 +159,16 @@ func (s *LibraryService) SyncPopularStream(ctx context.Context, limit int, onPro
 		uniq = append(uniq, a)
 	}
 
-	existing, err := s.repo.ExistingMetrics()
+	rawExisting, err := s.repo.ExistingMetrics()
 	if err != nil {
-		existing = map[string]bool{} // 查询失败时不跳过，按全量处理
+		rawExisting = map[string]bool{} // 查询失败时不跳过，按全量处理
+	}
+	// 归一化两侧 key：Plantbook 返回的 pid 可能是「空格学名」(Monstera deliciosa)，
+	// 而比对侧 guess 是下划线小写(monstera_deliciosa)。统一归一化后，已同步条目
+	// 才能稳定命中（修复此前按学名比对永远不命中的回归，否则每轮都重请求已同步项）。
+	existing := make(map[string]bool, len(rawExisting))
+	for k, v := range rawExisting {
+		existing[aliasToPID(k)] = v
 	}
 
 	// 已确认在线库未收录的学名（持久化，避免反复请求、永不推进）
@@ -279,12 +286,12 @@ func (s *LibraryService) SyncPopularStream(ctx context.Context, limit int, onPro
 				emit(idx, remaining, seed, "failed")
 				continue
 			}
-			pid := cands[0].PID
-			if existing[pid] || pid == "" {
-				// 详情对应 pid 已被本地收录（罕见）：按已同步处理，不重复请求
-				emit(idx, remaining, seed, "skipped")
-				continue
-			}
+		pid := cands[0].PID
+		if existing[aliasToPID(pid)] || pid == "" {
+			// 详情对应 pid 已被本地收录（罕见）：按已同步处理，不重复请求
+			emit(idx, remaining, seed, "skipped")
+			continue
+		}
 			lib, detailErr = s.plantbook.Detail(pid)
 			if IsThrottled(detailErr) {
 				throttled = true
@@ -335,9 +342,22 @@ func aliasToPID(latin string) string {
 	return strings.ToLower(strings.ReplaceAll(strings.TrimSpace(latin), " ", "_"))
 }
 
-// loadNotFound 读取已确认「在线库未收录」的学名集合（持久化到 data/plantbook_sync_state.json）。
+// knownNotFound 已确认 Plantbook 在线库未收录的学名（pid 形态）。
+// 硬编码以保证在任意部署环境首次同步即跳过，不依赖运行时文件（文件由服务器自身在
+// 其运行目录写入，本地开发沙箱无法预置到用户运行时）。运行时新发现的未收录项会追加
+// 进 data/plantbook_sync_state.json 持久化。
+var knownNotFound = []string{
+	"dracaena_reflexa",      // 百合竹
+	"spathiphyllum_wallisii", // 白掌
+}
+
+// loadNotFound 读取已确认「在线库未收录」的学名集合（持久化到 data/plantbook_sync_state.json），
+// 并合并硬编码的 knownNotFound，确保跨环境一致生效。
 func (s *LibraryService) loadNotFound() map[string]bool {
 	set := map[string]bool{}
+	for _, k := range knownNotFound {
+		set[k] = true
+	}
 	if s.syncStatePath == "" {
 		return set
 	}
