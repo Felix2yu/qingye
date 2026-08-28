@@ -41,24 +41,26 @@ const plantbookDailyLimit = 200
 
 // SyncProgress 单条植物的同步进度事件，由 SyncPopularStream 通过回调实时推送。
 type SyncProgress struct {
-	Type      string `json:"type"`      // "progress"
-	Index     int    `json:"index"`     // 当前植物在去重总表中的位置（1-based）
-	Total     int    `json:"total"`     // 去重后总条目数
-	Name      string `json:"name"`      // 当前植物中文名
-	Status    string `json:"status"`    // added | failed | skipped
-	Added     int    `json:"added"`     // 本轮累计新增
-	Failed    int    `json:"failed"`    // 本轮累计失败
-	Skipped   int    `json:"skipped"`   // 本轮累计跳过
-	Remaining int    `json:"remaining"` // 整个列表里尚未开始（含当前之后）的条目数
+	Type       string `json:"type"`       // "progress"
+	Index      int    `json:"index"`      // 当前植物在待同步队列中的位置（1-based）
+	Total      int    `json:"total"`      // 本轮待同步队列长度
+	Name       string `json:"name"`       // 当前植物中文名
+	Status     string `json:"status"`     // added | failed | duplicate
+	Added      int    `json:"added"`      // 本轮累计新增
+	Failed     int    `json:"failed"`     // 本轮累计失败
+	Duplicated int    `json:"duplicated"` // 本轮累计「同物异名」（解析到的 pid 本地已有，仅耗 1 次搜索）
+	Skipped    int    `json:"skipped"`    // 建队列时即排除的条目（本地已同步 / 已确认未收录）
+	Remaining  int    `json:"remaining"`  // 队列中尚未开始（含当前之后）的条目数
 }
 
 // SyncReport 整轮同步结果汇总（作为 SSE 的 done 事件 / JSON 降级返回）。
 type SyncReport struct {
 	Added       int      `json:"added"`
 	Failed      int      `json:"failed"`
-	Skipped     int      `json:"skipped"`
+	Duplicated  int      `json:"duplicated"`  // 同物异名：不同学名指向库内同一株，未重复入库
+	Skipped     int      `json:"skipped"`     // 建队列时排除（本地已同步 / 已确认未收录）
 	Remaining   int      `json:"remaining"`   // 尚未尝试、留待后续轮次的条目数
-	Total       int      `json:"total"`       // 去重后总条目数
+	Total       int      `json:"total"`       // 本轮待同步队列长度
 	Throttled   bool     `json:"throttled"`   // 触发服务端 429 限流
 	QuotaHit    bool     `json:"quotaHit"`    // 触及客户端每日配额上限提前停止
 	Message     string   `json:"message"`     // 面向用户的中文汇总
@@ -134,10 +136,15 @@ const syncInterval = 300 * time.Millisecond
 // 设计原则（在免费 API 配额内稳步推进）：
 //   - onProgress 每处理完一种植物被调用一次，前端据此显示「正在同步第 X/N 个」
 //   - 每轮最多向 Plantbook 发起 limit 个新条目的检索，分多次点击逐步完成
-//   - 本地已同步且含结构化指标的条目直接跳过（不发任何请求）——以「学名→pid」
-//     的下划线形态比对（修复原按空格学名比对永远命不中的缺陷）
-//   - 请求优化：双名（种级）学名优先用 pid 直接拉详情，省去一次 search 请求；
-//     仅当直接详情失败（多为 404）时回落 search→detail。单字（属级）学名直接 search
+//   - 本地已同步的条目直接跳过（不发任何请求）——两侧 key 统一用 aliasToPID
+//     归一化（Plantbook 返回的 pid 是带空格的原始学名，修复此前永不命中的回归）
+//   - 同物异名消除：持久化「别名 pid → Plantbook 规范 pid」解析表
+//     (data/plantbook_sync_state.json 的 resolved 字段)。已解析且目标已在库的条目
+//     建队列时即排除（0 请求）；轮内同一规范 pid 也只取一次详情。
+//     这是请求消耗的主要来源——实测约 60% 的条目是同物异名重复。
+//   - 请求路径固定为 search → detail（新增 2 次 / 同物异名 1 次 / 未收录 1 次）。
+//     曾用「学名直拼 pid 拉详情」省一次 search，但实测命中率仅约 33%，低于 50%
+//     盈亏平衡点（命中省 1 次、未命中要多付 404 那次），反而更耗配额，已移除。
 //   - 客户端每日配额护栏：剩余不足以完成下一种时主动停止本轮，避免触发 429
 //   - 触发 429 限流立即中止；请求级故障（网络/5xx）亦中止本轮
 //   - 单条缺失（库内无此植物 / 详情为空 / 写入失败）不中止，记入 FailedItems 供排查
@@ -172,10 +179,13 @@ func (s *LibraryService) SyncPopularStream(ctx context.Context, limit int, onPro
 	}
 
 	// 已确认在线库未收录的学名（持久化，避免反复请求、永不推进）
-	notFound := s.loadNotFound()
+	notFound, resolved := s.loadSyncState()
 
-	// 构建真正待同步队列：排除「本地已同步」与「已确认未收录」，二者均不发请求。
-	// 这样每一轮处理的都是从未尝试过的新植物，进度数字才有意义。
+	// 构建真正待同步队列。以下三类在发请求前即排除（0 请求），保证每一轮
+	// 处理的都是「从未尝试过、且库内确实没有」的新植物，进度数字才有意义：
+	//   1. 本地已同步
+	//   2. 已确认在线库未收录
+	//   3. 同物异名：该学名此前已解析到某个规范 pid，且该 pid 已在库
 	pending := make([]PlantAlias, 0, len(uniq))
 	excluded := 0
 	for _, seed := range uniq {
@@ -184,12 +194,16 @@ func (s *LibraryService) SyncPopularStream(ctx context.Context, limit int, onPro
 			excluded++
 			continue
 		}
+		if rp, ok := resolved[guess]; ok && rp != "" && existing[aliasToPID(rp)] {
+			excluded++
+			continue
+		}
 		pending = append(pending, seed)
 	}
 	total := len(pending)
 	rep.Total = total
 
-	added, failed := 0, 0
+	added, failed, duplicated := 0, 0, 0
 	var firstErr string
 	var throttled, quotaHit bool
 	var failedItems []string
@@ -199,30 +213,38 @@ func (s *LibraryService) SyncPopularStream(ctx context.Context, limit int, onPro
 			return
 		}
 		onProgress(SyncProgress{
-			Type:      "progress",
-			Index:     idx,
-			Total:     total,
-			Name:      seed.Zh,
-			Status:    status,
-			Added:     added,
-			Failed:    failed,
-			Skipped:   excluded,
-			Remaining: remaining,
+			Type:       "progress",
+			Index:      idx,
+			Total:      total,
+			Name:       seed.Zh,
+			Status:     status,
+			Added:      added,
+			Failed:     failed,
+			Duplicated: duplicated,
+			Skipped:    excluded,
+			Remaining:  remaining,
 		})
 	}
 
 	processed := 0
+	// 本轮已取过详情的规范 pid：同一轮内若另有别名指向同一株，不再重复取详情
+	roundPid := map[string]string{}
 	for i, seed := range pending {
 		if ctx != nil {
 			select {
 			case <-ctx.Done():
 				rep.Message = "客户端已断开，同步中断"
 				rep.Added, rep.Failed, rep.Skipped = added, failed, excluded
-				rep.Remaining = total - added - failed
+				rep.Duplicated = duplicated
+				rep.Remaining = total - added - failed - duplicated
 				rep.FailedItems = failedItems
 				return rep
 			default:
 			}
+		}
+		// 本轮配额用尽：不再发请求，留待后续点击
+		if limit > 0 && processed >= limit {
+			break
 		}
 		idx := i + 1
 		remaining := total - idx
@@ -233,80 +255,69 @@ func (s *LibraryService) SyncPopularStream(ctx context.Context, limit int, onPro
 			quotaHit = true
 			break
 		}
-
-		// 本轮配额用尽：不再发请求，留待后续点击
-		if limit > 0 && processed >= limit {
-			continue
-		}
 		if processed > 0 {
 			time.Sleep(syncInterval)
 		}
 		processed++
 
-		var lib *models.PlantLibrary
-		var detailErr error
-		directOK := false
-
-		// 双名（种级）优先直接拉详情，省一次 search 请求
-		if strings.Contains(seed.Latin, " ") {
-			lib, detailErr = s.plantbook.Detail(guess)
-			if IsThrottled(detailErr) {
-				throttled = true
-				firstErr = detailErr.Error()
-				break
-			}
-			if lib != nil {
-				directOK = true
-			}
-			// 失败（多为 404）则回落 search
+		// 固定两步：search 拿规范 pid（1 次）→ 库内没有才 detail（1 次）。
+		// 新增 2 次 / 同物异名 1 次 / 未收录 1 次，不再有「直接详情 404」的额外开销。
+		cands, e := s.plantbook.Search(seed.Latin)
+		if IsThrottled(e) {
+			throttled = true
+			firstErr = e.Error()
+			break
 		}
-
-		if !directOK {
-			cands, e := s.plantbook.Search(seed.Latin)
-			if IsThrottled(e) {
-				throttled = true
-				firstErr = e.Error()
-				break
-			}
-			if e != nil {
-				// 请求级故障：立即停止本轮，避免连续无效请求
-				failed++
-				failedItems = append(failedItems, fmt.Sprintf("%s(%s): %v", seed.Zh, seed.Latin, e))
-				firstErr = fmt.Sprintf("%s(%s): %v", seed.Zh, seed.Latin, e)
-				emit(idx, remaining, seed, "failed")
-				break
-			}
-			if len(cands) == 0 {
-				// 在线库确实未收录：永久记入黑名单，后续轮次直接跳过，
-				// 不再占用「前 N 个」位置、不再空耗请求配额。
-				failed++
-				failedItems = append(failedItems, fmt.Sprintf("%s(%s): 在线库未收录该植物", seed.Zh, seed.Latin))
+		if e != nil {
+			// 请求级故障：立即停止本轮，避免连续无效请求
+			failed++
+			failedItems = append(failedItems, fmt.Sprintf("%s(%s): %v", seed.Zh, seed.Latin, e))
+			firstErr = fmt.Sprintf("%s(%s): %v", seed.Zh, seed.Latin, e)
+			emit(idx, remaining, seed, "failed")
+			break
+		}
+		pid := pickCandidate(cands, guess)
+		if pid == "" {
+			// 在线库确实未收录：永久记入黑名单，后续轮次直接跳过，
+			// 不再占用「前 N 个」位置、不再空耗请求配额。
+			failed++
+			failedItems = append(failedItems, fmt.Sprintf("%s(%s): 在线库未收录该植物", seed.Zh, seed.Latin))
+			if !notFound[guess] {
 				notFound[guess] = true
-				s.saveNotFound(notFound)
-				emit(idx, remaining, seed, "failed")
-				continue
+				s.saveSyncState(notFound, resolved)
 			}
-		pid := cands[0].PID
-		if existing[aliasToPID(pid)] || pid == "" {
-			// 详情对应 pid 已被本地收录（罕见）：按已同步处理，不重复请求
-			emit(idx, remaining, seed, "skipped")
+			emit(idx, remaining, seed, "failed")
 			continue
 		}
-			lib, detailErr = s.plantbook.Detail(pid)
-			if IsThrottled(detailErr) {
-				throttled = true
-				firstErr = detailErr.Error()
-				break
-			}
-			if detailErr != nil {
-				failed++
-				failedItems = append(failedItems, fmt.Sprintf("%s(%s): 详情请求失败 %v", seed.Zh, seed.Latin, detailErr))
-				firstErr = fmt.Sprintf("%s(%s): %v", seed.Zh, seed.Latin, detailErr)
-				emit(idx, remaining, seed, "failed")
-				break
-			}
+
+		// 记录解析结果（即使本条因重复而跳过同样记录）：下轮起该学名在
+		// 建队列阶段即可 0 请求排除——这是消除同物异名重复请求的关键。
+		if resolved[guess] != pid {
+			resolved[guess] = pid
+			s.saveSyncState(notFound, resolved)
 		}
 
+		if existing[aliasToPID(pid)] || roundPid[pid] != "" {
+			// 同物异名：不同学名指向库内（或本轮已取的）同一株，只消耗 1 次搜索
+			duplicated++
+			emit(idx, remaining, seed, "duplicate")
+			continue
+		}
+		roundPid[pid] = seed.Latin
+
+		lib, detailErr := s.plantbook.Detail(pid)
+		if IsThrottled(detailErr) {
+			throttled = true
+			firstErr = detailErr.Error()
+			break
+		}
+		if detailErr != nil {
+			failed++
+			failedItems = append(failedItems, fmt.Sprintf("%s(%s): 详情请求失败 %v", seed.Zh, seed.Latin, detailErr))
+			firstErr = fmt.Sprintf("%s(%s): %v", seed.Zh, seed.Latin, detailErr)
+			emit(idx, remaining, seed, "failed")
+			break
+		}
 		if lib == nil {
 			failed++
 			failedItems = append(failedItems, fmt.Sprintf("%s(%s): 在线库未返回详情", seed.Zh, seed.Latin))
@@ -330,10 +341,11 @@ func (s *LibraryService) SyncPopularStream(ctx context.Context, limit int, onPro
 	}
 
 	rep.Added, rep.Failed, rep.Skipped = added, failed, excluded
-	rep.Remaining = total - added - failed
+	rep.Duplicated = duplicated
+	rep.Remaining = total - added - failed - duplicated
 	rep.Throttled, rep.QuotaHit = throttled, quotaHit
 	rep.FailedItems = failedItems
-	rep.Message = buildSyncMessage(added, failed, excluded, rep.Remaining, throttled, quotaHit, firstErr)
+	rep.Message = buildSyncMessage(added, failed, excluded, duplicated, rep.Remaining, throttled, quotaHit, firstErr)
 	return rep
 }
 
@@ -351,53 +363,99 @@ var knownNotFound = []string{
 	"spathiphyllum_wallisii", // 白掌
 }
 
-// loadNotFound 读取已确认「在线库未收录」的学名集合（持久化到 data/plantbook_sync_state.json），
-// 并合并硬编码的 knownNotFound，确保跨环境一致生效。
-func (s *LibraryService) loadNotFound() map[string]bool {
-	set := map[string]bool{}
-	for _, k := range knownNotFound {
-		set[k] = true
+// pickCandidate 从搜索结果中挑选最可信的候选 pid。
+// 优先级：学名/pid 精确命中 > 同属命中 > 首个候选（沿用 Plantbook 自身的相关度排序）。
+// 只做重排、不做过滤，因此不会比「直接取首个候选」更容易丢条目。
+func pickCandidate(cands []OnlineCandidate, guess string) string {
+	if len(cands) == 0 {
+		return ""
 	}
+	genus := strings.SplitN(guess, "_", 2)[0]
+	genusOf := func(v string) string { return strings.SplitN(aliasToPID(v), "_", 2)[0] }
+	for _, c := range cands {
+		if c.PID == "" {
+			continue
+		}
+		if aliasToPID(c.Alias) == guess || aliasToPID(c.PID) == guess {
+			return c.PID
+		}
+	}
+	if genus != "" {
+		for _, c := range cands {
+			if c.PID == "" {
+				continue
+			}
+			if genusOf(c.Alias) == genus || genusOf(c.PID) == genus {
+				return c.PID
+			}
+		}
+	}
+	return cands[0].PID
+}
+
+// syncState 同步状态（持久化到 data/plantbook_sync_state.json）。
+type syncState struct {
+	NotFound []string          `json:"not_found"` // 已确认在线库未收录的学名（pid 形态）
+	Resolved map[string]string `json:"resolved"`  // 别名 pid → Plantbook 规范 pid（消除同物异名重复请求）
+}
+
+// loadSyncState 读取持久化状态：已确认「在线库未收录」的学名集合 + 已解析的
+// 「学名 → 规范 pid」映射；并合并硬编码的 knownNotFound，确保跨环境一致生效。
+func (s *LibraryService) loadSyncState() (map[string]bool, map[string]string) {
+	notFound := map[string]bool{}
+	for _, k := range knownNotFound {
+		notFound[k] = true
+	}
+	resolved := map[string]string{}
 	if s.syncStatePath == "" {
-		return set
+		return notFound, resolved
 	}
 	b, err := os.ReadFile(s.syncStatePath)
 	if err != nil {
-		return set
+		return notFound, resolved
 	}
-	var st struct {
-		NotFound []string `json:"not_found"`
-	}
+	var st syncState
 	if err := json.Unmarshal(b, &st); err != nil {
-		return set
+		return notFound, resolved
 	}
 	for _, k := range st.NotFound {
-		set[k] = true
+		notFound[k] = true
 	}
-	return set
+	for k, v := range st.Resolved {
+		if k != "" && v != "" {
+			resolved[k] = v
+		}
+	}
+	return notFound, resolved
 }
 
-// saveNotFound 持久化「在线库未收录」学名集合，供后续轮次跳过（避免反复空耗配额）。
-func (s *LibraryService) saveNotFound(set map[string]bool) {
+// saveSyncState 持久化状态，供后续轮次跳过（避免反复空耗配额）。
+func (s *LibraryService) saveSyncState(notFound map[string]bool, resolved map[string]string) {
 	if s.syncStatePath == "" {
 		return
 	}
-	keys := make([]string, 0, len(set))
-	for k := range set {
+	keys := make([]string, 0, len(notFound))
+	for k := range notFound {
 		keys = append(keys, k)
 	}
 	sort.Strings(keys)
-	st := struct {
-		NotFound []string `json:"not_found"`
-	}{NotFound: keys}
+	st := syncState{NotFound: keys, Resolved: map[string]string{}}
+	for k, v := range resolved {
+		if k != "" && v != "" {
+			st.Resolved[k] = v
+		}
+	}
 	if b, err := json.MarshalIndent(st, "", "  "); err == nil {
 		_ = os.WriteFile(s.syncStatePath, b, 0o644)
 	}
 }
 
 // buildSyncMessage 拼装面向用户的中文汇总文案。
-func buildSyncMessage(added, failed, excluded, remaining int, throttled, quotaHit bool, firstErr string) string {
+func buildSyncMessage(added, failed, excluded, duplicated, remaining int, throttled, quotaHit bool, firstErr string) string {
 	msg := fmt.Sprintf("本轮新增 %d 种，失败 %d 种", added, failed)
+	if duplicated > 0 {
+		msg += fmt.Sprintf("，同物异名 %d 种（指向库内已有植物，各耗 1 次检索）", duplicated)
+	}
 	if excluded > 0 {
 		msg += fmt.Sprintf("，已排除 %d 种（本地已同步或在线库未收录）", excluded)
 	}

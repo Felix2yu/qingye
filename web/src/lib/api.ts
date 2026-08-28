@@ -167,20 +167,22 @@ async function request<T>(path: string, options?: RequestInit): Promise<T> {
 // 资料库批量同步：单条进度事件（SSE event: progress）
 export interface SyncProgressEvent {
 	type?: string;
-	index: number; // 当前植物在去重总表中的位置（1-based）
-	total: number; // 去重后总条目数
+	index: number; // 当前植物在待同步队列中的位置（1-based）
+	total: number; // 本轮待同步队列长度
 	name: string; // 当前植物中文名
-	status: string; // added | failed | skipped
+	status: string; // added | failed | duplicate
 	added: number;
 	failed: number;
-	skipped: number;
-	remaining: number; // 整个列表尚未开始的条目数
+	duplicated: number; // 同物异名：解析到的 pid 本地已有，仅耗 1 次检索
+	skipped: number; // 建队列时即排除（本地已同步 / 已确认未收录）
+	remaining: number; // 队列中尚未开始的条目数
 }
 
 // 资料库批量同步：整轮汇总（SSE event: done / JSON 降级）
 export interface SyncReport {
 	added: number;
 	failed: number;
+	duplicated: number;
 	skipped: number;
 	remaining: number;
 	total: number;

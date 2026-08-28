@@ -127,9 +127,10 @@ func (q *dailyQuota) remaining() int {
 }
 
 // canAffordPlant 是否还足以完成下一种植物。
-// 最坏路径：直接详情(1) 404 → 搜索(1) → 详情(1) = 3 次，预留该缓冲避免越界。
+// 最坏路径：搜索(1) → 详情(1) = 2 次（同步已统一为 search→detail 两步）。
+// 按 2 预留即可，按 3 预留会把每日可同步株数从约 100 压到约 66，属过度保守。
 func (q *dailyQuota) canAffordPlant() bool {
-	return q.remaining() >= 3
+	return q.remaining() >= 2
 }
 
 // quotaTick 每次真正发起 API 请求时调用（无 quota 时为空操作）

@@ -129,7 +129,15 @@
 
 	// 批量同步热门植物资料库
 	let syncing = $state(false);
-	let syncNow = $state<{ index: number; total: number; name: string; added: number; failed: number; skipped: number } | null>(null);
+	let syncNow = $state<{
+		index: number;
+		total: number;
+		name: string;
+		added: number;
+		failed: number;
+		duplicated: number;
+		skipped: number;
+	} | null>(null);
 	let syncReport = $state<SyncReport | null>(null);
 	async function syncPopular() {
 		syncing = true;
@@ -137,7 +145,15 @@
 		syncReport = null;
 		try {
 			const r = await api.syncPopularLibraryStream((p) => {
-				syncNow = { index: p.index, total: p.total, name: p.name, added: p.added, failed: p.failed, skipped: p.skipped };
+				syncNow = {
+					index: p.index,
+					total: p.total,
+					name: p.name,
+					added: p.added,
+					failed: p.failed,
+					duplicated: p.duplicated,
+					skipped: p.skipped
+				};
 			});
 			syncReport = r;
 			showToast(r.message);
@@ -338,14 +354,14 @@
 		<div class="setting-title">📚 植物资料库同步</div>
 		<p class="muted">
 			从在线植物库（Plantbook）批量拉取常见植物的中文养护指南，沉淀到本地资料库，离线可用。需在服务端配置环境变量 PLANTBOOK_CLIENT_ID 与 PLANTBOOK_CLIENT_SECRET（open.plantbook.io 注册获取）。
-			免费账户每日请求上限 200 次；每轮最多同步约 30 种，已入库条目自动跳过、单次点击不会越界。点击后实时显示进度，多次点击即可逐步补齐全表。
+			免费账户每日请求上限 200 次；每轮最多同步约 30 种。已入库条目、已确认在线库未收录的条目、以及同物异名（不同学名指向同一株）都会在建队列时直接排除，不消耗请求；单次点击不会越界。点击后实时显示进度，多次点击即可逐步补齐全表。
 		</p>
 		<div class="sync-row">
 			<button class="btn btn-primary btn-sm" onclick={syncPopular} disabled={syncing}>
 				{syncing ? '同步中…' : '同步热门植物'}
 			</button>
 			{#if syncNow}
-				<span class="muted sync-live">正在同步第 {syncNow.index}/{syncNow.total} 个：{syncNow.name}（已加 {syncNow.added} · 失败 {syncNow.failed} · 已排除 {syncNow.skipped}）</span>
+				<span class="muted sync-live">正在同步第 {syncNow.index}/{syncNow.total} 个：{syncNow.name}（已加 {syncNow.added} · 失败 {syncNow.failed} · 同物异名 {syncNow.duplicated} · 已排除 {syncNow.skipped}）</span>
 			{:else if syncReport}
 				<span class="muted">{syncReport.message}</span>
 			{/if}

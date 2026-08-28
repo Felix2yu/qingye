@@ -2,6 +2,7 @@ package services
 
 import (
 	"os"
+	"path/filepath"
 	"testing"
 
 	"qingye/server/config"
@@ -57,23 +58,69 @@ func TestAliasToPIDNormalizesSpacedPid(t *testing.T) {
 	}
 }
 
-// TestLoadNotFoundMergesKnown 守护「已知未收录」跨环境生效：
-// loadNotFound 必须合并硬编码的 knownNotFound，不依赖运行时文件是否存在。
-func TestLoadNotFoundMergesKnown(t *testing.T) {
+// TestLoadSyncStateMergesKnown 守护「已知未收录」跨环境生效：
+// loadSyncState 必须合并硬编码的 knownNotFound，不依赖运行时文件是否存在。
+func TestLoadSyncStateMergesKnown(t *testing.T) {
 	// 准备一个临时文件，仅含一个条目，验证与 knownNotFound 合并
 	f, err := os.CreateTemp(t.TempDir(), "sync_state_*.json")
 	if err != nil {
 		t.Fatal(err)
 	}
-	_, _ = f.WriteString(`{"not_found":["foo_bar"]}`)
+	_, _ = f.WriteString(`{"not_found":["foo_bar"],"resolved":{"a_b":"c_d"}}`)
 	f.Close()
 
 	svc := NewLibraryService(&config.Config{})
 	svc.syncStatePath = f.Name()
-	set := svc.loadNotFound()
+	set, resolved := svc.loadSyncState()
 	for _, want := range append([]string{"foo_bar"}, knownNotFound...) {
 		if !set[want] {
-			t.Errorf("loadNotFound 缺少 %q（knownNotFound 或文件条目未合并）", want)
+			t.Errorf("loadSyncState 缺少 %q（knownNotFound 或文件条目未合并）", want)
 		}
+	}
+	if resolved["a_b"] != "c_d" {
+		t.Errorf("resolved 未正确加载：%v", resolved)
+	}
+}
+
+// TestSaveSyncStateRoundTrip 守护 resolved 解析表可持久化并回读，
+// 否则同物异名的重复请求无法在下轮被消除。
+func TestSaveSyncStateRoundTrip(t *testing.T) {
+	p := filepath.Join(t.TempDir(), "plantbook_sync_state.json")
+	svc := NewLibraryService(&config.Config{})
+	svc.syncStatePath = p
+	svc.saveSyncState(map[string]bool{"x_y": true}, map[string]string{"a_b": "c_d"})
+
+	notFound, resolved := svc.loadSyncState()
+	if !notFound["x_y"] {
+		t.Errorf("not_found 未持久化：%v", notFound)
+	}
+	if resolved["a_b"] != "c_d" {
+		t.Errorf("resolved 未持久化：%v", resolved)
+	}
+	// knownNotFound 必须始终在（跨环境生效）
+	for _, k := range knownNotFound {
+		if !notFound[k] {
+			t.Errorf("knownNotFound 缺失 %q", k)
+		}
+	}
+}
+
+// TestPickCandidatePrefersExact 守护候选优选：学名精确命中优先于「首个候选」，
+// 避免把同属近缘种的养护指南错配到目标植物上。
+func TestPickCandidatePrefersExact(t *testing.T) {
+	cands := []OnlineCandidate{
+		{PID: "dracaena_reflexa", Alias: "Dracaena reflexa"},
+		{PID: "dracaena_arborea", Alias: "Dracaena arborea"},
+	}
+	if got := pickCandidate(cands, "dracaena_arborea"); got != "dracaena_arborea" {
+		t.Fatalf("pickCandidate = %q, want dracaena_arborea（应优先精确命中而非首个候选）", got)
+	}
+	// 无精确命中时退回同属候选
+	if got := pickCandidate(cands, "dracaena_fragrans"); got == "" {
+		t.Fatalf("同属回落不应返回空")
+	}
+	// 空结果返回空
+	if got := pickCandidate(nil, "dracaena_arborea"); got != "" {
+		t.Fatalf("空候选应返回空串，got %q", got)
 	}
 }
