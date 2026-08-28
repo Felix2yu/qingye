@@ -3,6 +3,7 @@ package handlers
 import (
 	"time"
 
+	"qingye/server/config"
 	"qingye/server/models"
 	"qingye/server/services"
 
@@ -50,14 +51,16 @@ func (b *plantBody) toModel(id uint) (*models.Plant, error) {
 
 // PlantHandler 植物与房间
 type PlantHandler struct {
-	plants *services.PlantService
-	rooms  *services.RoomService
+	plants  *services.PlantService
+	rooms   *services.RoomService
+	library *services.LibraryService
 }
 
-func NewPlantHandler() *PlantHandler {
+func NewPlantHandler(cfg *config.Config) *PlantHandler {
 	return &PlantHandler{
-		plants: services.NewPlantService(),
-		rooms:  services.NewRoomService(),
+		plants:  services.NewPlantService(),
+		rooms:   services.NewRoomService(),
+		library: services.NewLibraryService(cfg),
 	}
 }
 
@@ -146,6 +149,33 @@ func (h *PlantHandler) GetPlant(c *gin.Context) {
 		return
 	}
 	OK(c, p)
+}
+
+// CareGuide 返回该植物在本地资料库中最匹配的养护指南（按学名/名称匹配）。
+// 无匹配时 found=false。供「植物详情页」挂载资料库指南，无需冗余字段。
+func (h *PlantHandler) CareGuide(c *gin.Context) {
+	id, ok := parseID(c)
+	if !ok {
+		return
+	}
+	p, err := h.plants.Get(id)
+	if err != nil {
+		NotFound(c, "植物不存在")
+		return
+	}
+	lib := h.library.MatchGuide(p.Name, p.Species)
+	if lib == nil {
+		OK(c, gin.H{"found": false})
+		return
+	}
+	OK(c, gin.H{
+		"found":     true,
+		"libraryId": lib.ID,
+		"name":      lib.Name,
+		"alias":     lib.Alias,
+		"guide":     lib.Guide,
+		"link":      lib.Link,
+	})
 }
 
 func (h *PlantHandler) CreatePlant(c *gin.Context) {

@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import { api } from '$lib/api';
-	import type { WeatherConfig, WeatherLog } from '$lib/api';
+	import type { WeatherConfig, WeatherLog, SyncReport } from '$lib/api';
 	import { showToast, settings } from '$lib/stores';
 	import { theme, THEME_MODE_LABEL, type ThemeMode } from '$lib/theme.svelte';
 	import Icon from '$lib/components/Icon.svelte';
@@ -129,21 +129,27 @@
 
 	// 批量同步热门植物资料库
 	let syncing = $state(false);
-	let syncMsg = $state('');
+	let syncNow = $state<{ index: number; total: number; name: string; added: number; failed: number; skipped: number } | null>(null);
+	let syncReport = $state<SyncReport | null>(null);
 	async function syncPopular() {
 		syncing = true;
-		syncMsg = '';
+		syncNow = null;
+		syncReport = null;
 		try {
-			const r = await api.syncPopularLibrary();
-			syncMsg = r.message;
+			const r = await api.syncPopularLibraryStream((p) => {
+				syncNow = { index: p.index, total: p.total, name: p.name, added: p.added, failed: p.failed, skipped: p.skipped };
+			});
+			syncReport = r;
 			showToast(r.message);
 		} catch (e) {
-			syncMsg = (e as Error).message;
+			syncReport = null;
 			showToast((e as Error).message, 'err');
 		} finally {
 			syncing = false;
 		}
 	}
+	// 进度百分比（用于进度条）
+	let syncPct = $derived(syncNow && syncNow.total > 0 ? Math.round((syncNow.index / syncNow.total) * 100) : 0);
 
 	onMount(load);
 
@@ -332,14 +338,31 @@
 		<div class="setting-title">📚 植物资料库同步</div>
 		<p class="muted">
 			从在线植物库（Plantbook）批量拉取常见植物的中文养护指南，沉淀到本地资料库，离线可用。需在服务端配置环境变量 PLANTBOOK_CLIENT_ID 与 PLANTBOOK_CLIENT_SECRET（open.plantbook.io 注册获取）。
-			免费账户有每日请求配额：每轮最多同步约 30 种，遇到错误自动停止；已入库条目不再请求，多次点击即可逐步补齐全表。
+			免费账户每日请求上限 200 次；每轮最多同步约 30 种，已入库条目自动跳过、单次点击不会越界。点击后实时显示进度，多次点击即可逐步补齐全表。
 		</p>
 		<div class="sync-row">
 			<button class="btn btn-primary btn-sm" onclick={syncPopular} disabled={syncing}>
 				{syncing ? '同步中…' : '同步热门植物'}
 			</button>
-			{#if syncMsg}<span class="muted">{syncMsg}</span>{/if}
+			{#if syncNow}
+				<span class="muted sync-live">正在同步第 {syncNow.index}/{syncNow.total} 个：{syncNow.name}（已加 {syncNow.added} · 失败 {syncNow.failed} · 跳过 {syncNow.skipped}）</span>
+			{:else if syncReport}
+				<span class="muted">{syncReport.message}</span>
+			{/if}
 		</div>
+		{#if syncing && syncNow}
+			<div class="progress" aria-hidden="true">
+				<div class="progress-bar" style="width: {syncPct}%"></div>
+			</div>
+		{/if}
+		{#if syncReport && syncReport.failedItems && syncReport.failedItems.length}
+			<div class="sync-failed">
+				<div class="muted">本轮失败 {syncReport.failedItems.length} 种：</div>
+				<ul>
+					{#each syncReport.failedItems as fi}<li>{fi}</li>{/each}
+				</ul>
+			</div>
+		{/if}
 	</div>
 
 	<div class="card setting-card">
@@ -571,5 +594,43 @@
 	.digest-row select {
 		width: auto;
 		min-width: 96px;
+	}
+	.sync-row {
+		display: flex;
+		align-items: center;
+		gap: 12px;
+		flex-wrap: wrap;
+	}
+	.sync-live {
+		font-variant-numeric: tabular-nums;
+	}
+	.progress {
+		margin-top: 12px;
+		height: 8px;
+		border-radius: 999px;
+		background: var(--border);
+		overflow: hidden;
+	}
+	.progress-bar {
+		height: 100%;
+		border-radius: 999px;
+		background: linear-gradient(90deg, var(--green-500), var(--green-600));
+		transition: width 0.2s ease;
+	}
+	.sync-failed {
+		margin-top: 12px;
+		padding: 10px 12px;
+		border: 1px solid var(--border);
+		border-radius: var(--radius-sm);
+		background: var(--surface);
+	}
+	.sync-failed ul {
+		margin: 6px 0 0;
+		padding-left: 18px;
+		display: flex;
+		flex-direction: column;
+		gap: 4px;
+		font-size: 13px;
+		color: var(--text-secondary);
 	}
 </style>

@@ -4,6 +4,7 @@
 	import type { PlantLibrary } from '$lib/api';
 	import { showToast } from '$lib/stores';
 	import { zhCategory, zhOrigin } from '$lib/plant-zh';
+	import CareGuide from '$lib/components/CareGuide.svelte';
 
 	let list = $state<PlantLibrary[]>([]);
 	let keyword = $state('');
@@ -149,7 +150,7 @@
 				{/each}
 			</div>
 
-			<p class="guide-text">{showDetail.guide}</p>
+			<CareGuide guide={showDetail.guide} />
 
 			{#if detailNames.length > 0}
 				<p class="muted cn-line">常见名：{detailNames.join('、')}</p>
@@ -195,10 +196,6 @@
 		line-clamp: 3;
 		-webkit-box-orient: vertical;
 		overflow: hidden;
-	}
-	.guide-text {
-		line-height: 1.8;
-		color: var(--text);
 	}
 	.meta-line {
 		display: flex;

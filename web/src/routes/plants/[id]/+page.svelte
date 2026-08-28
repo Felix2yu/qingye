@@ -5,6 +5,7 @@
 	import type { Plant, Task, PhotoDiary, CareLog } from '$lib/api';
 	import { dueLabel, TASK_TYPES, TASK_TYPE_EMOJI, TASK_TYPE_LABEL, formatDate, formatDateTime, careTypeLabel, fmtDate } from '$lib/format';
 	import Icon from '$lib/components/Icon.svelte';
+	import CareGuide from '$lib/components/CareGuide.svelte';
 	import { showToast } from '$lib/stores';
 	import { goto } from '$app/navigation';
 
@@ -14,6 +15,7 @@
 	let tasks = $state<Task[]>([]);
 	let diaries = $state<PhotoDiary[]>([]);
 	let cares = $state<CareLog[]>([]);
+	let careGuide = $state<{ found: boolean; name?: string; alias?: string; guide?: string; link?: string } | null>(null);
 	let loading = $state(true);
 
 	let editing = $state(false);
@@ -35,16 +37,18 @@
 	async function load() {
 		loading = true;
 		try {
-			const [p, t, d, c] = await Promise.all([
+			const [p, t, d, c, cg] = await Promise.all([
 				api.getPlant(id),
 				api.listTasks({ plantId: id, includeDone: false }),
 				api.listDiaries({ plantId: id, pageSize: 5 }),
-				api.careLogs(id)
+				api.careLogs(id),
+				api.getPlantCareGuide(id)
 			]);
 			plant = p;
 			tasks = t;
 			diaries = d.list;
 			cares = c;
+			careGuide = cg;
 		} catch (e) {
 			showToast((e as Error).message, 'err');
 		} finally {
@@ -181,6 +185,22 @@
 				</div>
 			</div>
 		</div>
+
+		{#if careGuide?.found}
+			<h2 class="section-title">养护指南</h2>
+			<div class="card care-guide-card">
+				<CareGuide guide={careGuide.guide} />
+				<div class="cg-source muted">
+					来源：资料库{careGuide.name ? ` · ${careGuide.name}` : ''}{careGuide.alias ? `（${careGuide.alias}）` : ''}
+					{#if careGuide.link}
+						· <a class="cg-link" href={careGuide.link} target="_blank" rel="noopener noreferrer">在线资料 ↗</a>
+					{/if}
+				</div>
+			</div>
+		{:else if careGuide}
+			<h2 class="section-title">养护指南</h2>
+			<p class="empty muted">暂无匹配的资料库养护指南（可在「资料库」同步该植物后显示）</p>
+		{/if}
 
 		<h2 class="section-title">养护任务（{tasks.length}）</h2>
 		<div class="task-actions">
@@ -489,6 +509,23 @@
 	}
 	.task-actions {
 		margin-bottom: 12px;
+	}
+	.care-guide-card {
+		padding: 14px 16px;
+		margin-bottom: 16px;
+	}
+	.cg-source {
+		margin-top: 12px;
+		padding-top: 10px;
+		border-top: 1px dashed var(--border);
+		font-size: 12px;
+	}
+	.cg-link {
+		color: var(--green-700);
+		text-decoration: none;
+	}
+	.cg-link:hover {
+		text-decoration: underline;
 	}
 	.task-row {
 		display: flex;

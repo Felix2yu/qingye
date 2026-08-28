@@ -25,7 +25,7 @@ func Setup(r *gin.Engine, cfg *config.Config) {
 	api := r.Group("/api")
 
 	// 植物与房间
-	plantH := handlers.NewPlantHandler()
+	plantH := handlers.NewPlantHandler(cfg)
 	api.GET("/rooms", plantH.ListRooms)
 	api.POST("/rooms", plantH.CreateRoom)
 	api.PUT("/rooms/:id", plantH.UpdateRoom)
@@ -35,6 +35,7 @@ func Setup(r *gin.Engine, cfg *config.Config) {
 	api.GET("/plants/:id", plantH.GetPlant)
 	api.PUT("/plants/:id", plantH.UpdatePlant)
 	api.DELETE("/plants/:id", plantH.DeletePlant)
+	api.GET("/plants/:id/care-guide", plantH.CareGuide)
 
 	// 任务
 	taskH := handlers.NewTaskHandler()

@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"encoding/json"
 	"fmt"
 	"net/http"
 	"strconv"
@@ -23,7 +24,11 @@ func NewLibraryHandler(cfg *config.Config) *LibraryHandler {
 
 // Search 本地资料库搜索（添加植物时带入指南）
 func (h *LibraryHandler) Search(c *gin.Context) {
-	keyword := c.Query("keyword")
+	// 兼容前端 ?q= 与历史 ?keyword= 两种参数名
+	keyword := c.Query("q")
+	if keyword == "" {
+		keyword = c.Query("keyword")
+	}
 	list, err := h.svc.Search(keyword)
 	if err != nil {
 		ServerError(c, err.Error())
@@ -68,7 +73,8 @@ func (h *LibraryHandler) ImportOnline(c *gin.Context) {
 }
 
 // SyncPopular 批量同步内置热门植物到本地资料库（离线可用）
-// ?limit=N 每轮最多检索的新条目数（默认 30）
+// ?limit=N 每轮最多检索的新条目数（默认 30）。以 SSE 实时推送每条进度，
+// 结束时推送 done 事件（SyncReport）。无 Flusher 环境（如单测）降级为 JSON。
 func (h *LibraryHandler) SyncPopular(c *gin.Context) {
 	if !h.svc.OnlineEnabled() {
 		BadRequest(c, "未配置 Plantbook 凭据（PLANTBOOK_CLIENT_ID / PLANTBOOK_CLIENT_SECRET），无法在线同步")
@@ -78,29 +84,33 @@ func (h *LibraryHandler) SyncPopular(c *gin.Context) {
 	if limit <= 0 || limit > 200 {
 		limit = 30
 	}
-	added, failed, skipped, remaining, firstErr, throttled := h.svc.SyncPopular(limit)
 
-	msg := fmt.Sprintf("本轮新增 %d 种，失败 %d 种", added, failed)
-	if skipped > 0 {
-		msg += fmt.Sprintf("，跳过 %d 种（本地已存在）", skipped)
+	flusher, ok := c.Writer.(http.Flusher)
+	if !ok {
+		// 非流式环境（如单测）：直接返回汇总 JSON
+		rep := h.svc.SyncPopularStream(c.Request.Context(), limit, nil)
+		OK(c, rep)
+		return
 	}
-	switch {
-	case throttled != nil:
-		msg += fmt.Sprintf("；%s。稍后再次同步可从断点继续", throttled.Error())
-	case firstErr != "":
-		msg += fmt.Sprintf("；已停止：%s", firstErr)
-	case remaining > 0:
-		msg += fmt.Sprintf("。还有 %d 种待同步，稍后再次点击继续", remaining)
-	default:
-		msg += "。全部条目已处理完毕 🌿"
-	}
-	OK(c, gin.H{
-		"added":     added,
-		"failed":    failed,
-		"skipped":   skipped,
-		"remaining": remaining,
-		"total":     added + failed + skipped + remaining,
-		"throttled": throttled != nil,
-		"message":   msg,
+
+	c.Writer.Header().Set("Content-Type", "text/event-stream")
+	c.Writer.Header().Set("Cache-Control", "no-cache")
+	c.Writer.Header().Set("Connection", "keep-alive")
+	c.Writer.Header().Set("X-Accel-Buffering", "no")
+	c.Writer.WriteHeader(http.StatusOK)
+
+	rep := h.svc.SyncPopularStream(c.Request.Context(), limit, func(p services.SyncProgress) {
+		data, err := json.Marshal(p)
+		if err != nil {
+			return
+		}
+		fmt.Fprintf(c.Writer, "event: progress\ndata: %s\n\n", data)
+		flusher.Flush()
 	})
+
+	data, err := json.Marshal(rep)
+	if err == nil {
+		fmt.Fprintf(c.Writer, "event: done\ndata: %s\n\n", data)
+		flusher.Flush()
+	}
 }

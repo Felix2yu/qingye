@@ -6,6 +6,7 @@ import (
 	"io"
 	"net/http"
 	"net/url"
+	"os"
 	"regexp"
 	"strconv"
 	"strings"
@@ -35,6 +36,8 @@ type PlantbookClient struct {
 	token     string
 	expiresAt time.Time
 
+	quota *dailyQuota // 每日请求配额（客户端侧护栏，避免触发服务端 429）
+
 	client *http.Client
 }
 
@@ -46,6 +49,102 @@ func NewPlantbookClient(clientID, secret, staticToken string) *PlantbookClient {
 		staticTk: staticToken,
 		client:   &http.Client{Timeout: 12 * time.Second},
 	}
+}
+
+// dailyQuota 客户端侧每日请求配额护栏。
+//
+// Plantbook 免费账户按自然日限额（200 次/天，自 2025-11-01 起生效）。
+// 一旦触及，服务端返回 429 并需等待到次日重置，期间整库不可同步。
+// 为此在客户端统计当日已用请求数并持久化到本地文件，跨进程/重启不丢失，
+// 在剩余额度不足以完成下一种植物（最坏 3 次：直接详情失败→搜索→详情）时
+// 主动停止本轮，避免触发服务端限流。
+type dailyQuota struct {
+	mu    sync.Mutex
+	date  string // 当前统计所属日期 YYYY-MM-DD
+	used  int    // 当日已用请求数
+	limit int    // 每日上限
+	file  string // 持久化文件路径（空表示不持久化）
+}
+
+func newDailyQuota(limit int, file string) *dailyQuota {
+	q := &dailyQuota{limit: limit, file: file}
+	if q.file != "" {
+		if data, err := os.ReadFile(q.file); err == nil {
+			var s struct {
+				Date string `json:"date"`
+				Used int    `json:"used"`
+			}
+			if json.Unmarshal(data, &s) == nil {
+				q.date, q.used = s.Date, s.Used
+			}
+		}
+	}
+	q.resetIfNewDay()
+	return q
+}
+
+// resetIfNewDay 跨日则清零（调用方需持锁）
+func (q *dailyQuota) resetIfNewDay() {
+	today := time.Now().Format("2006-01-02")
+	if q.date != today {
+		q.date = today
+		q.used = 0
+	}
+}
+
+func (q *dailyQuota) save() {
+	if q.file == "" {
+		return
+	}
+	s := struct {
+		Date string `json:"date"`
+		Used int    `json:"used"`
+	}{q.date, q.used}
+	if b, err := json.Marshal(s); err == nil {
+		_ = os.WriteFile(q.file, b, 0o644)
+	}
+}
+
+// tick 记一次请求消耗（线程安全，每日自动重置并落盘）
+func (q *dailyQuota) tick() {
+	q.mu.Lock()
+	defer q.mu.Unlock()
+	q.resetIfNewDay()
+	q.used++
+	q.save()
+}
+
+// remaining 当日剩余可用请求数（线程安全）
+func (q *dailyQuota) remaining() int {
+	q.mu.Lock()
+	defer q.mu.Unlock()
+	q.resetIfNewDay()
+	r := q.limit - q.used
+	if r < 0 {
+		return 0
+	}
+	return r
+}
+
+// canAffordPlant 是否还足以完成下一种植物。
+// 最坏路径：直接详情(1) 404 → 搜索(1) → 详情(1) = 3 次，预留该缓冲避免越界。
+func (q *dailyQuota) canAffordPlant() bool {
+	return q.remaining() >= 3
+}
+
+// quotaTick 每次真正发起 API 请求时调用（无 quota 时为空操作）
+func (p *PlantbookClient) quotaTick() {
+	if p.quota != nil {
+		p.quota.tick()
+	}
+}
+
+// canAffordPlant 暴露配额判断（无 quota 时恒为 true）
+func (p *PlantbookClient) canAffordPlant() bool {
+	if p.quota == nil {
+		return true
+	}
+	return p.quota.canAffordPlant()
 }
 
 func (p *PlantbookClient) Enabled() bool {
@@ -71,6 +170,7 @@ func (p *PlantbookClient) getToken() (string, error) {
 		return "", fmt.Errorf("请求 Plantbook 凭据失败: %w", err)
 	}
 	defer resp.Body.Close()
+	p.quotaTick() // 凭据请求同样计入当日配额
 	data, _ := io.ReadAll(io.LimitReader(resp.Body, 1<<20))
 	if resp.StatusCode != http.StatusOK {
 		msg := strings.TrimSpace(string(data))
@@ -354,6 +454,7 @@ func (p *PlantbookClient) tryGet(rawURL string) ([]byte, error) {
 	}
 	req.Header.Set("Authorization", "Bearer "+tk)
 	req.Header.Set("Accept", "application/json")
+	p.quotaTick() // 每次 API GET 计入当日配额
 	resp, err := p.client.Do(req)
 	if err != nil {
 		return nil, fmt.Errorf("请求 Plantbook 失败: %w", err)

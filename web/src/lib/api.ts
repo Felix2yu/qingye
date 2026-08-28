@@ -164,6 +164,43 @@ async function request<T>(path: string, options?: RequestInit): Promise<T> {
 	}
 }
 
+// 资料库批量同步：单条进度事件（SSE event: progress）
+export interface SyncProgressEvent {
+	type?: string;
+	index: number; // 当前植物在去重总表中的位置（1-based）
+	total: number; // 去重后总条目数
+	name: string; // 当前植物中文名
+	status: string; // added | failed | skipped
+	added: number;
+	failed: number;
+	skipped: number;
+	remaining: number; // 整个列表尚未开始的条目数
+}
+
+// 资料库批量同步：整轮汇总（SSE event: done / JSON 降级）
+export interface SyncReport {
+	added: number;
+	failed: number;
+	skipped: number;
+	remaining: number;
+	total: number;
+	throttled: boolean;
+	quotaHit: boolean;
+	message: string;
+	failedItems: string[];
+}
+
+// 解析单个 SSE 帧：返回 {event, data}
+function parseSSEFrame(frame: string): { event: string; data: string } | null {
+	let event = 'message';
+	let data = '';
+	for (const line of frame.split('\n')) {
+		if (line.startsWith('event:')) event = line.slice(6).trim();
+		else if (line.startsWith('data:')) data += line.slice(5).trim();
+	}
+	return { event, data };
+}
+
 export const api = {
 	// ---- 房间 ----
 	listRooms: () => request<Room[]>('/api/rooms'),
@@ -248,18 +285,84 @@ export const api = {
 			method: 'POST',
 			body: JSON.stringify({ pid })
 		}),
-	// 批量同步内置热门植物到本地资料库（离线可用，每轮限量）
-	syncPopularLibrary: () =>
+
+	// 植物详情页：取该植物在资料库中最匹配的养护指南（found=false 表示无匹配）
+	getPlantCareGuide: (id: number) =>
 		request<{
-			added: number;
-			failed: number;
-			skipped: number;
-			remaining: number;
-			total: number;
-			throttled: boolean;
-			message: string;
-		}>('/api/library/sync-popular', {
-			method: 'POST'
+			found: boolean;
+			libraryId?: number;
+			name?: string;
+			alias?: string;
+			guide?: string;
+			link?: string;
+		}>(`/api/plants/${id}/care-guide`),
+	// 批量同步内置热门植物到本地资料库（离线可用，每轮限量）
+	// 以 SSE 实时推送进度，onProgress 每处理完一种植物回调一次；
+	// 返回整轮 SyncReport。服务端不支持 SSE 时降级为单次 JSON。
+	syncPopularLibraryStream: (onProgress: (p: SyncProgressEvent) => void): Promise<SyncReport> =>
+		new Promise<SyncReport>((resolve, reject) => {
+			const url = `${BASE}/api/library/sync-popular`;
+			fetch(url, {
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json' }
+			})
+				.then((resp) => {
+					if (!resp.ok) {
+						resp
+							.text()
+							.then((t) => reject(new Error(t || `同步失败 (${resp.status})`)))
+							.catch(() => reject(new Error(`同步失败 (${resp.status})`)));
+						return;
+					}
+					const ct = resp.headers.get('content-type') || '';
+					if (ct.includes('text/event-stream') && resp.body) {
+						const reader = resp.body.getReader();
+						const decoder = new TextDecoder();
+						let buf = '';
+						const pump = (): Promise<void> =>
+							reader.read().then(({ done, value }) => {
+								if (done) {
+									// 流结束：若残留可直接解析的 JSON（降级场景）则解析
+									if (buf.trim()) {
+										try {
+											resolve(JSON.parse(buf) as SyncReport);
+										} catch {
+											reject(new Error('同步流异常结束'));
+										}
+									}
+									return;
+								}
+								buf += decoder.decode(value, { stream: true });
+								let idx: number;
+								while ((idx = buf.indexOf('\n\n')) >= 0) {
+									const frame = buf.slice(0, idx);
+									buf = buf.slice(idx + 2);
+									const parsed = parseSSEFrame(frame);
+									if (!parsed) continue;
+									if (parsed.event === 'progress') {
+										try {
+											onProgress(JSON.parse(parsed.data) as SyncProgressEvent);
+										} catch {
+											/* 忽略坏帧 */
+										}
+									} else if (parsed.event === 'done') {
+										try {
+											resolve(JSON.parse(parsed.data) as SyncReport);
+										} catch (e) {
+											reject(e as Error);
+										}
+										return;
+									}
+								}
+								return pump();
+							});
+						pump().catch(reject);
+					} else {
+						// 非流式（单测/降级）：直接 JSON
+						resp.json().then((r) => resolve(r as SyncReport)).catch(reject);
+					}
+				})
+				.catch(reject);
 		}),
 
 	// ---- 设置 ----

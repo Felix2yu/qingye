@@ -48,7 +48,7 @@ func setupTest(t *testing.T) *gin.Engine {
 	r := gin.New()
 	api := r.Group("/api")
 
-	plantH := NewPlantHandler()
+	plantH := NewPlantHandler(&config.Config{})
 	api.GET("/rooms", plantH.ListRooms)
 	api.POST("/rooms", plantH.CreateRoom)
 	api.PUT("/rooms/:id", plantH.UpdateRoom)
@@ -58,6 +58,7 @@ func setupTest(t *testing.T) *gin.Engine {
 	api.GET("/plants/:id", plantH.GetPlant)
 	api.PUT("/plants/:id", plantH.UpdatePlant)
 	api.DELETE("/plants/:id", plantH.DeletePlant)
+	api.GET("/plants/:id/care-guide", plantH.CareGuide)
 
 	taskH := NewTaskHandler()
 	api.GET("/tasks", taskH.List)
