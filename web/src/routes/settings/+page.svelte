@@ -345,7 +345,7 @@
 				{syncing ? '同步中…' : '同步热门植物'}
 			</button>
 			{#if syncNow}
-				<span class="muted sync-live">正在同步第 {syncNow.index}/{syncNow.total} 个：{syncNow.name}（已加 {syncNow.added} · 失败 {syncNow.failed} · 跳过 {syncNow.skipped}）</span>
+				<span class="muted sync-live">正在同步第 {syncNow.index}/{syncNow.total} 个：{syncNow.name}（已加 {syncNow.added} · 失败 {syncNow.failed} · 已排除 {syncNow.skipped}）</span>
 			{:else if syncReport}
 				<span class="muted">{syncReport.message}</span>
 			{/if}

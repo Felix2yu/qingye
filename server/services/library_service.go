@@ -2,8 +2,11 @@ package services
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
+	"os"
 	"path/filepath"
+	"sort"
 	"strings"
 	"time"
 
@@ -14,8 +17,9 @@ import (
 
 // LibraryService 资料库业务逻辑
 type LibraryService struct {
-	repo      *repositories.LibraryRepo
-	plantbook *PlantbookClient
+	repo          *repositories.LibraryRepo
+	plantbook     *PlantbookClient
+	syncStatePath string // 持久化「在线库未收录」学名的文件路径，避免反复请求未收录植物
 }
 
 func NewLibraryService(cfg *config.Config) *LibraryService {
@@ -26,8 +30,9 @@ func NewLibraryService(cfg *config.Config) *LibraryService {
 		pb.quota = newDailyQuota(plantbookDailyLimit, quotaPath)
 	}
 	return &LibraryService{
-		repo:      repositories.NewLibraryRepo(),
-		plantbook: pb,
+		repo:          repositories.NewLibraryRepo(),
+		plantbook:     pb,
+		syncStatePath: filepath.Join(filepath.Dir(cfg.DBPath), "plantbook_sync_state.json"),
 	}
 }
 
@@ -143,7 +148,7 @@ func (s *LibraryService) SyncPopularStream(ctx context.Context, limit int, onPro
 		return rep
 	}
 
-	// 去重，得到全局顺序与总数（用于进度 X/N）
+	// 去重，得到别名总表
 	uniq := make([]PlantAlias, 0, len(plantAliases))
 	seenLatin := make(map[string]bool)
 	for _, a := range plantAliases {
@@ -153,15 +158,31 @@ func (s *LibraryService) SyncPopularStream(ctx context.Context, limit int, onPro
 		seenLatin[a.Latin] = true
 		uniq = append(uniq, a)
 	}
-	total := len(uniq)
-	rep.Total = total
 
 	existing, err := s.repo.ExistingMetrics()
 	if err != nil {
 		existing = map[string]bool{} // 查询失败时不跳过，按全量处理
 	}
 
-	added, failed, skipped := 0, 0, 0
+	// 已确认在线库未收录的学名（持久化，避免反复请求、永不推进）
+	notFound := s.loadNotFound()
+
+	// 构建真正待同步队列：排除「本地已同步」与「已确认未收录」，二者均不发请求。
+	// 这样每一轮处理的都是从未尝试过的新植物，进度数字才有意义。
+	pending := make([]PlantAlias, 0, len(uniq))
+	excluded := 0
+	for _, seed := range uniq {
+		guess := aliasToPID(seed.Latin)
+		if existing[guess] || notFound[guess] {
+			excluded++
+			continue
+		}
+		pending = append(pending, seed)
+	}
+	total := len(pending)
+	rep.Total = total
+
+	added, failed := 0, 0
 	var firstErr string
 	var throttled, quotaHit bool
 	var failedItems []string
@@ -178,19 +199,19 @@ func (s *LibraryService) SyncPopularStream(ctx context.Context, limit int, onPro
 			Status:    status,
 			Added:     added,
 			Failed:    failed,
-			Skipped:   skipped,
+			Skipped:   excluded,
 			Remaining: remaining,
 		})
 	}
 
 	processed := 0
-	for i, seed := range uniq {
+	for i, seed := range pending {
 		if ctx != nil {
 			select {
 			case <-ctx.Done():
 				rep.Message = "客户端已断开，同步中断"
-				rep.Added, rep.Failed, rep.Skipped = added, failed, skipped
-				rep.Remaining = total - added - failed - skipped
+				rep.Added, rep.Failed, rep.Skipped = added, failed, excluded
+				rep.Remaining = total - added - failed
 				rep.FailedItems = failedItems
 				return rep
 			default:
@@ -198,15 +219,7 @@ func (s *LibraryService) SyncPopularStream(ctx context.Context, limit int, onPro
 		}
 		idx := i + 1
 		remaining := total - idx
-		// 学名→pid：空格转下划线、转小写（与 Plantbook pid 形态一致）
-		guess := strings.ToLower(strings.ReplaceAll(strings.TrimSpace(seed.Latin), " ", "_"))
-
-		// 本地已同步且含结构化指标：跳过（无请求）
-		if existing[guess] {
-			skipped++
-			emit(idx, remaining, seed, "skipped")
-			continue
-		}
+		guess := aliasToPID(seed.Latin)
 
 		// 客户端每日配额不足：停止本轮（断点可续）
 		if !s.plantbook.canAffordPlant() {
@@ -257,14 +270,18 @@ func (s *LibraryService) SyncPopularStream(ctx context.Context, limit int, onPro
 				break
 			}
 			if len(cands) == 0 {
+				// 在线库确实未收录：永久记入黑名单，后续轮次直接跳过，
+				// 不再占用「前 N 个」位置、不再空耗请求配额。
 				failed++
 				failedItems = append(failedItems, fmt.Sprintf("%s(%s): 在线库未收录该植物", seed.Zh, seed.Latin))
+				notFound[guess] = true
+				s.saveNotFound(notFound)
 				emit(idx, remaining, seed, "failed")
 				continue
 			}
 			pid := cands[0].PID
 			if existing[pid] || pid == "" {
-				skipped++
+				// 详情对应 pid 已被本地收录（罕见）：按已同步处理，不重复请求
 				emit(idx, remaining, seed, "skipped")
 				continue
 			}
@@ -305,19 +322,64 @@ func (s *LibraryService) SyncPopularStream(ctx context.Context, limit int, onPro
 		emit(idx, remaining, seed, "added")
 	}
 
-	rep.Added, rep.Failed, rep.Skipped = added, failed, skipped
-	rep.Remaining = total - added - failed - skipped
+	rep.Added, rep.Failed, rep.Skipped = added, failed, excluded
+	rep.Remaining = total - added - failed
 	rep.Throttled, rep.QuotaHit = throttled, quotaHit
 	rep.FailedItems = failedItems
-	rep.Message = buildSyncMessage(added, failed, skipped, rep.Remaining, throttled, quotaHit, firstErr)
+	rep.Message = buildSyncMessage(added, failed, excluded, rep.Remaining, throttled, quotaHit, firstErr)
 	return rep
 }
 
+// aliasToPID 学名 → Plantbook pid 形态（小写、空格转下划线），用于比对与直接详情请求。
+func aliasToPID(latin string) string {
+	return strings.ToLower(strings.ReplaceAll(strings.TrimSpace(latin), " ", "_"))
+}
+
+// loadNotFound 读取已确认「在线库未收录」的学名集合（持久化到 data/plantbook_sync_state.json）。
+func (s *LibraryService) loadNotFound() map[string]bool {
+	set := map[string]bool{}
+	if s.syncStatePath == "" {
+		return set
+	}
+	b, err := os.ReadFile(s.syncStatePath)
+	if err != nil {
+		return set
+	}
+	var st struct {
+		NotFound []string `json:"not_found"`
+	}
+	if err := json.Unmarshal(b, &st); err != nil {
+		return set
+	}
+	for _, k := range st.NotFound {
+		set[k] = true
+	}
+	return set
+}
+
+// saveNotFound 持久化「在线库未收录」学名集合，供后续轮次跳过（避免反复空耗配额）。
+func (s *LibraryService) saveNotFound(set map[string]bool) {
+	if s.syncStatePath == "" {
+		return
+	}
+	keys := make([]string, 0, len(set))
+	for k := range set {
+		keys = append(keys, k)
+	}
+	sort.Strings(keys)
+	st := struct {
+		NotFound []string `json:"not_found"`
+	}{NotFound: keys}
+	if b, err := json.MarshalIndent(st, "", "  "); err == nil {
+		_ = os.WriteFile(s.syncStatePath, b, 0o644)
+	}
+}
+
 // buildSyncMessage 拼装面向用户的中文汇总文案。
-func buildSyncMessage(added, failed, skipped, remaining int, throttled, quotaHit bool, firstErr string) string {
+func buildSyncMessage(added, failed, excluded, remaining int, throttled, quotaHit bool, firstErr string) string {
 	msg := fmt.Sprintf("本轮新增 %d 种，失败 %d 种", added, failed)
-	if skipped > 0 {
-		msg += fmt.Sprintf("，跳过 %d 种（本地已存在）", skipped)
+	if excluded > 0 {
+		msg += fmt.Sprintf("，已排除 %d 种（本地已同步或在线库未收录）", excluded)
 	}
 	switch {
 	case throttled:
