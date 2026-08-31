@@ -112,16 +112,29 @@
 		resyncProgress = { index: 0, total: 0, name: '', count: 0 };
 		try {
 			const res = await api.resyncAndTranslateLibrary((p) => {
-				resyncProgress = { index: p.index, total: p.total, name: p.name, count: p.count };
-			});
-			showToast(`重新拉取完成：成功 ${res.success} 条，失败 ${res.failed} 条`, 'ok');
-			await search(keyword.trim());
-		} catch (e) {
-			showToast((e as Error).message, 'err');
-		} finally {
-			resyncing = false;
-		}
+			resyncProgress = { index: p.index, total: p.total, name: p.name, count: p.count };
+		});
+		showToast(`重新拉取完成：成功 ${res.success} 条，失败 ${res.failed} 条`, 'ok');
+		await search(keyword.trim());
+	} catch (e) {
+		showToast((e as Error).message, 'err');
+	} finally {
+		resyncing = false;
 	}
+}
+
+async function clearLibrary() {
+	if (!confirm('确定要清空资料库所有数据吗？此操作不可恢复！')) {
+		return;
+	}
+	try {
+		await api.clearLibrary();
+		showToast('资料库已清空', 'ok');
+		await search(keyword.trim());
+	} catch (e) {
+		showToast((e as Error).message, 'err');
+	}
+}
 </script>
 
 <svelte:head><title>青野集 · 资料库</title></svelte:head>
@@ -137,6 +150,9 @@
 		</button>
 		<button class="btn btn-ghost btn-sm resync-btn" onclick={resyncAndTranslate} disabled={resyncing}>
 			{resyncing ? `重新拉取中 ${resyncProgress.index}/${resyncProgress.total}` : '重新拉取并翻译'}
+		</button>
+		<button class="btn btn-ghost btn-sm clear-btn" onclick={clearLibrary}>
+			清空资料库
 		</button>
 	</div>
 
@@ -224,6 +240,9 @@
 		white-space: nowrap;
 	}
 	.resync-btn {
+		white-space: nowrap;
+	}
+	.clear-btn {
 		white-space: nowrap;
 	}
 	.lib-card {

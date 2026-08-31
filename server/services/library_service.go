@@ -497,6 +497,11 @@ func (s *LibraryService) RefreshLocalGuides() (int, error) {
 	return count, nil
 }
 
+// ClearLibrary 清空资料库所有条目（从Plantbook同步的数据）
+func (s *LibraryService) ClearLibrary() error {
+	return s.repo.DeleteAll()
+}
+
 // ResyncAndTranslateProgress 重新拉取并翻译的进度事件
 type ResyncAndTranslateProgress struct {
 	Type   string `json:"type"`   // "progress"

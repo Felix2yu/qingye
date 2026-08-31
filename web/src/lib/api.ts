@@ -309,6 +309,11 @@ export const api = {
 		request<{ refreshed: number }>('/api/library/refresh-guide', {
 			method: 'POST'
 		}),
+	// 清空资料库所有条目
+	clearLibrary: () =>
+		request<{ message: string }>('/api/library/clear', {
+			method: 'POST'
+		}),
 	// 重新拉取所有植物的英文Guide并翻译为中文（消耗API配额）
 	resyncAndTranslateLibrary: (onProgress: (p: ResyncProgress) => void): Promise<ResyncReport> =>
 		new Promise((resolve, reject) => {

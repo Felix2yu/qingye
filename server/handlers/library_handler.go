@@ -125,6 +125,15 @@ func (h *LibraryHandler) RefreshGuide(c *gin.Context) {
 	OK(c, gin.H{"refreshed": count})
 }
 
+// ClearLibrary 清空资料库所有条目
+func (h *LibraryHandler) ClearLibrary(c *gin.Context) {
+	if err := h.svc.ClearLibrary(); err != nil {
+		ServerError(c, err.Error())
+		return
+	}
+	OK(c, gin.H{"message": "资料库已清空"})
+}
+
 // ResyncAndTranslate 重新拉取所有植物的英文Guide并翻译为中文（消耗API配额）
 func (h *LibraryHandler) ResyncAndTranslate(c *gin.Context) {
 	if !h.svc.OnlineEnabled() {

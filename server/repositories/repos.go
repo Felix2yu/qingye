@@ -306,6 +306,16 @@ func (r *LibraryRepo) UpdateGuide(id uint, guide string) error {
 	return r.db.Model(&models.PlantLibrary{}).Where("id = ?", id).Update("guide", guide).Error
 }
 
+// DeleteAll 清空资料库所有条目
+func (r *LibraryRepo) DeleteAll() error {
+	return r.db.Delete(&models.PlantLibrary{}, "1 = 1").Error
+}
+
+// DeleteByPID 删除指定pid的资料库条目
+func (r *LibraryRepo) DeleteByPID(pid string) error {
+	return r.db.Where("pid = ?", pid).Delete(&models.PlantLibrary{}).Error
+}
+
 // ---------- UserSetting ----------
 
 type SettingRepo struct{ db *gorm.DB }

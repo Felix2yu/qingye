@@ -66,6 +66,7 @@ func Setup(r *gin.Engine, cfg *config.Config) {
 	api.POST("/library/import", libH.ImportOnline)
 	api.POST("/library/sync-popular", libH.SyncPopular)
 	api.POST("/library/refresh-guide", libH.RefreshGuide)
+	api.POST("/library/clear", libH.ClearLibrary)
 	api.POST("/library/resync-and-translate", libH.ResyncAndTranslate)
 
 	// 设置
