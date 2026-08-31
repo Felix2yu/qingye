@@ -10,6 +10,7 @@
 	let keyword = $state('');
 	let loading = $state(true);
 	let showDetail = $state<PlantLibrary | null>(null);
+	let refreshing = $state(false);
 
 	// 当前详情条目的全部常见名
 	const detailNames = $derived(showDetail ? commonNames(showDetail) : []);
@@ -74,18 +75,32 @@
 		return rows;
 	}
 
-	// 解析常见名 JSON 数组
+	// 解析常见名 JSON 数组，仅保留中文名
 	function commonNames(p: PlantLibrary): string[] {
 		if (!p.commonNames) return [];
 		try {
 			const arr = JSON.parse(p.commonNames);
-			return Array.isArray(arr) ? arr.filter((x) => typeof x === 'string' && x.trim()) : [];
+			if (!Array.isArray(arr)) return [];
+			return arr.filter((x) => typeof x === 'string' && /[\u4e00-\u9fa5]/.test(x));
 		} catch {
 			return [];
 		}
 	}
 
 	onMount(() => search(''));
+
+	async function refreshGuide() {
+		refreshing = true;
+		try {
+			const res = await api.refreshLibraryGuide();
+			showToast(`已刷新 ${res.refreshed} 条指南`, 'ok');
+			await search(keyword.trim());
+		} catch (e) {
+			showToast((e as Error).message, 'err');
+		} finally {
+			refreshing = false;
+		}
+	}
 </script>
 
 <svelte:head><title>青野集 · 资料库</title></svelte:head>
@@ -96,6 +111,9 @@
 
 	<div class="search">
 		<input bind:value={keyword} oninput={onInput} placeholder="搜索植物名称或别名，如：绿萝、多肉" />
+		<button class="btn btn-ghost btn-sm refresh-btn" onclick={refreshGuide} disabled={refreshing}>
+			{refreshing ? '翻译中…' : '刷新中文'}
+		</button>
 	</div>
 
 	{#if loading}
@@ -171,6 +189,15 @@
 <style>
 	.search {
 		margin-bottom: 20px;
+		display: flex;
+		gap: 10px;
+		align-items: center;
+	}
+	.search input {
+		flex: 1;
+	}
+	.refresh-btn {
+		white-space: nowrap;
 	}
 	.lib-card {
 		text-align: left;

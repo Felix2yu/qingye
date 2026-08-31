@@ -294,6 +294,18 @@ func (r *LibraryRepo) UpsertByPID(lib *models.PlantLibrary) error {
 	}).Error
 }
 
+// ListAll 获取所有资料库条目
+func (r *LibraryRepo) ListAll() ([]models.PlantLibrary, error) {
+	var list []models.PlantLibrary
+	err := r.db.Find(&list).Error
+	return list, err
+}
+
+// UpdateGuide 更新单条资料库的 Guide 字段
+func (r *LibraryRepo) UpdateGuide(id uint, guide string) error {
+	return r.db.Model(&models.PlantLibrary{}).Where("id = ?", id).Update("guide", guide).Error
+}
+
 // ---------- UserSetting ----------
 
 type SettingRepo struct{ db *gorm.DB }

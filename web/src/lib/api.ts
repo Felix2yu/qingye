@@ -287,6 +287,11 @@ export const api = {
 			method: 'POST',
 			body: JSON.stringify({ pid })
 		}),
+	// 本地刷新：将所有英文养护指南翻译为中文（不调用外部API）
+	refreshLibraryGuide: () =>
+		request<{ refreshed: number }>('/api/library/refresh-guide', {
+			method: 'POST'
+		}),
 
 	// 植物详情页：取该植物在资料库中最匹配的养护指南（found=false 表示无匹配）
 	getPlantCareGuide: (id: number) =>

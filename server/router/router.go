@@ -65,6 +65,7 @@ func Setup(r *gin.Engine, cfg *config.Config) {
 	api.GET("/library/online", libH.SearchOnline)
 	api.POST("/library/import", libH.ImportOnline)
 	api.POST("/library/sync-popular", libH.SyncPopular)
+	api.POST("/library/refresh-guide", libH.RefreshGuide)
 
 	// 设置
 	settingH := handlers.NewSettingHandler()

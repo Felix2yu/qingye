@@ -114,3 +114,13 @@ func (h *LibraryHandler) SyncPopular(c *gin.Context) {
 		flusher.Flush()
 	}
 }
+
+// RefreshGuide 本地刷新：将所有英文养护指南翻译为中文（不调用外部API）
+func (h *LibraryHandler) RefreshGuide(c *gin.Context) {
+	count, err := h.svc.RefreshLocalGuides()
+	if err != nil {
+		ServerError(c, err.Error())
+		return
+	}
+	OK(c, gin.H{"refreshed": count})
+}

@@ -473,3 +473,26 @@ func buildSyncMessage(added, failed, excluded, duplicated, remaining int, thrott
 	}
 	return msg
 }
+
+// RefreshLocalGuides 本地批量翻译：将所有含英文的养护指南翻译为中文（不调用外部API）
+func (s *LibraryService) RefreshLocalGuides() (int, error) {
+	libs, err := s.repo.ListAll()
+	if err != nil {
+		return 0, err
+	}
+	count := 0
+	for _, lib := range libs {
+		guide := lib.Guide
+		if guide == "" {
+			continue
+		}
+		translated := translateCareEnToZh(guide)
+		if translated != guide {
+			if err := s.repo.UpdateGuide(lib.ID, translated); err != nil {
+				continue
+			}
+			count++
+		}
+	}
+	return count, nil
+}
