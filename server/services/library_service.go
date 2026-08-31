@@ -496,3 +496,125 @@ func (s *LibraryService) RefreshLocalGuides() (int, error) {
 	}
 	return count, nil
 }
+
+// ResyncAndTranslateProgress 重新拉取并翻译的进度事件
+type ResyncAndTranslateProgress struct {
+	Type   string `json:"type"`   // "progress"
+	Index  int    `json:"index"`  // 当前位置（1-based）
+	Total  int    `json:"total"`  // 总数
+	Name   string `json:"name"`   // 植物名称
+	Status string `json:"status"` // success | failed | skipped
+	Count  int    `json:"count"`  // 本轮成功数
+}
+
+// ResyncAndTranslateReport 重新拉取并翻译的结果报告
+type ResyncAndTranslateReport struct {
+	Total   int `json:"total"`
+	Success int `json:"success"`
+	Failed  int `json:"failed"`
+}
+
+// ResyncAndTranslate 重新拉取所有植物的英文Guide并翻译为中文
+// limit: 本轮最多处理多少条（0=全部）
+func (s *LibraryService) ResyncAndTranslate(ctx context.Context, limit int, onProgress func(ResyncAndTranslateProgress)) ResyncAndTranslateReport {
+	var rep ResyncAndTranslateReport
+	if !s.plantbook.Enabled() {
+		return rep
+	}
+
+	libs, err := s.repo.ListAll()
+	if err != nil {
+		return rep
+	}
+
+	// 只处理有pid的条目（从Plantbook同步的）
+	var toResync []models.PlantLibrary
+	for _, lib := range libs {
+		if lib.PID != "" {
+			toResync = append(toResync, lib)
+		}
+	}
+	rep.Total = len(toResync)
+
+	processed := 0
+	for i, lib := range toResync {
+		if ctx != nil {
+			select {
+			case <-ctx.Done():
+				return rep
+			default:
+			}
+		}
+		if limit > 0 && processed >= limit {
+			break
+		}
+
+		// 从Plantbook重新拉取详情
+		newLib, err := s.plantbook.Detail(lib.PID)
+		if err != nil {
+			if onProgress != nil {
+				onProgress(ResyncAndTranslateProgress{
+					Type:   "progress",
+					Index:  i + 1,
+					Total:  rep.Total,
+					Name:   lib.Name,
+					Status: "failed",
+					Count:  rep.Success,
+				})
+			}
+			rep.Failed++
+			continue
+		}
+		if newLib == nil {
+			if onProgress != nil {
+				onProgress(ResyncAndTranslateProgress{
+					Type:   "progress",
+					Index:  i + 1,
+					Total:  rep.Total,
+					Name:   lib.Name,
+					Status: "skipped",
+					Count:  rep.Success,
+				})
+			}
+			continue
+		}
+
+		// 翻译英文Guide为中文
+		translatedGuide := translateCareEnToZh(newLib.Guide)
+		newLib.Guide = translatedGuide
+
+		// 更新数据库
+		if err := s.repo.UpsertByPID(newLib); err != nil {
+			if onProgress != nil {
+				onProgress(ResyncAndTranslateProgress{
+					Type:   "progress",
+					Index:  i + 1,
+					Total:  rep.Total,
+					Name:   lib.Name,
+					Status: "failed",
+					Count:  rep.Success,
+				})
+			}
+			rep.Failed++
+			continue
+		}
+
+		rep.Success++
+		processed++
+		if onProgress != nil {
+			onProgress(ResyncAndTranslateProgress{
+				Type:   "progress",
+				Index:  i + 1,
+				Total:  rep.Total,
+				Name:   lib.Name,
+				Status: "success",
+				Count:  rep.Success,
+			})
+		}
+
+		// 控制请求频率
+		time.Sleep(syncInterval)
+	}
+
+	return rep
+}

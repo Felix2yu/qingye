@@ -192,6 +192,23 @@ export interface SyncReport {
 	failedItems: string[];
 }
 
+// 重新拉取并翻译：单条进度事件（SSE event: progress）
+export interface ResyncProgress {
+	type?: string;
+	index: number;
+	total: number;
+	name: string;
+	status: string; // success | failed | skipped
+	count: number;  // 本轮成功数
+}
+
+// 重新拉取并翻译：整轮汇总（SSE event: done）
+export interface ResyncReport {
+	total: number;
+	success: number;
+	failed: number;
+}
+
 // 解析单个 SSE 帧：返回 {event, data}
 function parseSSEFrame(frame: string): { event: string; data: string } | null {
 	let event = 'message';
@@ -291,6 +308,28 @@ export const api = {
 	refreshLibraryGuide: () =>
 		request<{ refreshed: number }>('/api/library/refresh-guide', {
 			method: 'POST'
+		}),
+	// 重新拉取所有植物的英文Guide并翻译为中文（消耗API配额）
+	resyncAndTranslateLibrary: (onProgress: (p: ResyncProgress) => void): Promise<ResyncReport> =>
+		new Promise((resolve, reject) => {
+			const es = new EventSource(`/api/library/resync-and-translate`);
+			es.addEventListener('progress', (e) => {
+				try {
+					onProgress(JSON.parse(e.data));
+				} catch {}
+			});
+			es.addEventListener('done', (e) => {
+				es.close();
+				try {
+					resolve(JSON.parse(e.data));
+				} catch (err) {
+					reject(err);
+				}
+			});
+			es.addEventListener('error', () => {
+				es.close();
+				reject(new Error('连接失败'));
+			});
 		}),
 
 	// 植物详情页：取该植物在资料库中最匹配的养护指南（found=false 表示无匹配）

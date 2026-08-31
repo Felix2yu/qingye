@@ -11,6 +11,8 @@
 	let loading = $state(true);
 	let showDetail = $state<PlantLibrary | null>(null);
 	let refreshing = $state(false);
+	let resyncing = $state(false);
+	let resyncProgress = $state({ index: 0, total: 0, name: '', count: 0 });
 
 	// 当前详情条目的全部常见名
 	const detailNames = $derived(showDetail ? commonNames(showDetail) : []);
@@ -101,6 +103,25 @@
 			refreshing = false;
 		}
 	}
+
+	async function resyncAndTranslate() {
+		if (!confirm('将从Plantbook重新拉取所有植物的英文指南并翻译为中文，消耗API配额（每日200次上限）。确定继续？')) {
+			return;
+		}
+		resyncing = true;
+		resyncProgress = { index: 0, total: 0, name: '', count: 0 };
+		try {
+			const res = await api.resyncAndTranslateLibrary((p) => {
+				resyncProgress = { index: p.index, total: p.total, name: p.name, count: p.count };
+			});
+			showToast(`重新拉取完成：成功 ${res.success} 条，失败 ${res.failed} 条`, 'ok');
+			await search(keyword.trim());
+		} catch (e) {
+			showToast((e as Error).message, 'err');
+		} finally {
+			resyncing = false;
+		}
+	}
 </script>
 
 <svelte:head><title>青野集 · 资料库</title></svelte:head>
@@ -113,6 +134,9 @@
 		<input bind:value={keyword} oninput={onInput} placeholder="搜索植物名称或别名，如：绿萝、多肉" />
 		<button class="btn btn-ghost btn-sm refresh-btn" onclick={refreshGuide} disabled={refreshing}>
 			{refreshing ? '翻译中…' : '刷新中文'}
+		</button>
+		<button class="btn btn-ghost btn-sm resync-btn" onclick={resyncAndTranslate} disabled={resyncing}>
+			{resyncing ? `重新拉取中 ${resyncProgress.index}/${resyncProgress.total}` : '重新拉取并翻译'}
 		</button>
 	</div>
 
@@ -197,6 +221,9 @@
 		flex: 1;
 	}
 	.refresh-btn {
+		white-space: nowrap;
+	}
+	.resync-btn {
 		white-space: nowrap;
 	}
 	.lib-card {

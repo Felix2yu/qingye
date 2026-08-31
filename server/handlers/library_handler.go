@@ -124,3 +124,40 @@ func (h *LibraryHandler) RefreshGuide(c *gin.Context) {
 	}
 	OK(c, gin.H{"refreshed": count})
 }
+
+// ResyncAndTranslate 重新拉取所有植物的英文Guide并翻译为中文（消耗API配额）
+func (h *LibraryHandler) ResyncAndTranslate(c *gin.Context) {
+	if !h.svc.OnlineEnabled() {
+		BadRequest(c, "未配置 Plantbook 凭据，无法在线重新拉取")
+		return
+	}
+	limit, _ := strconv.Atoi(c.DefaultQuery("limit", "0"))
+
+	flusher, ok := c.Writer.(http.Flusher)
+	if !ok {
+		rep := h.svc.ResyncAndTranslate(c.Request.Context(), limit, nil)
+		OK(c, rep)
+		return
+	}
+
+	c.Writer.Header().Set("Content-Type", "text/event-stream")
+	c.Writer.Header().Set("Cache-Control", "no-cache")
+	c.Writer.Header().Set("Connection", "keep-alive")
+	c.Writer.Header().Set("X-Accel-Buffering", "no")
+	c.Writer.WriteHeader(http.StatusOK)
+
+	rep := h.svc.ResyncAndTranslate(c.Request.Context(), limit, func(p services.ResyncAndTranslateProgress) {
+		data, err := json.Marshal(p)
+		if err != nil {
+			return
+		}
+		fmt.Fprintf(c.Writer, "event: progress\ndata: %s\n\n", data)
+		flusher.Flush()
+	})
+
+	data, err := json.Marshal(rep)
+	if err == nil {
+		fmt.Fprintf(c.Writer, "event: done\ndata: %s\n\n", data)
+		flusher.Flush()
+	}
+}
