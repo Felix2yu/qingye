@@ -11,10 +11,10 @@ import (
 
 // Run 写入种子数据：植物资料库、初始设置，以及首次运行的演示数据
 func Run(db *gorm.DB) error {
-	// 1. 植物资料库
+	// 1. 植物资料库（仅当有数据时写入）
 	var libCount int64
 	db.Model(&models.PlantLibrary{}).Count(&libCount)
-	if libCount == 0 {
+	if libCount == 0 && len(libraryData) > 0 {
 		if err := db.Create(&libraryData).Error; err != nil {
 			return err
 		}

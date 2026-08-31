@@ -46,8 +46,8 @@ func TestRun_WritesDemoData(t *testing.T) {
 	if diaries < 2 {
 		t.Errorf("diaries = %d, want >= 2", diaries)
 	}
-	if libs != 10 {
-		t.Errorf("libs = %d, want 10", libs)
+	if libs != 0 {
+		t.Errorf("libs = %d, want 0", libs)
 	}
 	if sets != 1 {
 		t.Errorf("settings = %d, want 1", sets)

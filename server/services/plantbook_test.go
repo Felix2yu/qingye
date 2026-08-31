@@ -211,8 +211,8 @@ func TestBuildGuide_care优先(t *testing.T) {
 		},
 	}
 	guide := buildGuide(d)
-	if !contains(guide, "Keep soil consistently moist") {
-		t.Errorf("care 文本应优先于枚举翻译\nguide: %s", guide)
+	if !contains(guide, "保持土壤持续湿润") {
+		t.Errorf("care 文本应翻译为中文\nguide: %s", guide)
 	}
 }
 
