@@ -497,7 +497,7 @@ func (s *LibraryService) RefreshLocalGuides() (int, error) {
 	return count, nil
 }
 
-// ClearLibrary 清空资料库所有条目（从Plantbook同步的数据）
+// ClearLibrary 清空资料库所有条目（从Plantbook同步的数据），保留同步状态
 func (s *LibraryService) ClearLibrary() error {
 	return s.repo.DeleteAll()
 }
