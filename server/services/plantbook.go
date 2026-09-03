@@ -771,6 +771,8 @@ func buildGuide(d pbDetail) string {
 	var b strings.Builder
 	addLine := func(label, v string) {
 		if v = strings.TrimSpace(v); v != "" {
+			// 将 care 描述从英文翻译为中文
+			v = translateCare(label, v)
 			fmt.Fprintf(&b, "%s：%s\n", label, v)
 		}
 	}
