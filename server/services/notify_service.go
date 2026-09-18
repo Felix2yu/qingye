@@ -7,15 +7,13 @@ import (
 	"sync"
 	"time"
 
-	"github.com/containrrr/shoutrrr"
+	apprise "github.com/unraid/apprise-go"
 )
 
-// NotifyService 基于 shoutrrr 的通知发送服务。
-// 通知地址（shoutrrr URL，如 discord://token@id、telegram://token@chatid、
+// NotifyService 基于 apprise-go 的通知发送服务。
+// 通知地址（apprise URL，如 discord://token@id、telegram://token@chatid、
 // gotify://host/token、slack://token@channel 等）存储在 UserSetting.NotifyURL，
 // 未配置时所有发送静默跳过。
-//
-// 模块使用我自己 fork 的 github.com/Felix2yu/shoutrrr（go.mod 中以 replace 指向）。
 type NotifyService struct {
 	mu              sync.Mutex
 	lastWeatherSent time.Time // 天气通知节流：同一天气状况下 6 小时内只发一次，避免轮询刷屏
@@ -42,7 +40,7 @@ func (n *NotifyService) Send(message string) error {
 	if url == "" {
 		return nil
 	}
-	if err := shoutrrr.Send(url, message); err != nil {
+	if err := apprise.Send([]string{url}, message); err != nil {
 		log.Printf("[notify] 发送失败: %v", err)
 		return err
 	}
