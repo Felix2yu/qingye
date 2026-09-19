@@ -74,7 +74,7 @@ func Setup(r *gin.Engine, cfg *config.Config) {
 	api.GET("/settings", settingH.Get)
 	api.PUT("/settings", settingH.Update)
 
-	// 通知（shoutrrr）
+	// 通知（apprise）
 	notifyH := handlers.NewNotifyHandler()
 	api.PUT("/settings/notify", notifyH.SaveNotify)
 	api.PUT("/settings/digest-hour", notifyH.SaveDigestHour)

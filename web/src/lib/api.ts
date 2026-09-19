@@ -108,7 +108,7 @@ export interface UserSetting {
 	id: number;
 	workdays: string; // "1,2,3,4,5"
 	prefs: string; // JSON
-	notifyURL: string; // shoutrrr URL，为空表示未开启通知
+	notifyURL: string; // apprise URL，为空表示未开启通知
 	digestHour: number; // 每日摘要推送小时（0-23）
 }
 

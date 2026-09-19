@@ -11,7 +11,7 @@ func TestNotifyService_Send_InvalidURL(t *testing.T) {
 		t.Fatalf("save notify url: %v", err)
 	}
 	n := NewNotifyService()
-	// 未知 scheme 应使 shoutrrr.Send 失败，覆盖 Send 的 error 分支
+	// 未知 scheme 应使 apprise.Send 失败，覆盖 Send 的 error 分支
 	if err := n.Send("hi"); err == nil {
 		t.Error("expected error from invalid notify url")
 	}

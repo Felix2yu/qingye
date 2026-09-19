@@ -6,7 +6,7 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-// NotifyHandler 通知（shoutrrr）配置与测试
+// NotifyHandler 通知（apprise）配置与测试
 type NotifyHandler struct{ svc *services.SettingService }
 
 func NewNotifyHandler() *NotifyHandler {

@@ -113,7 +113,7 @@ func (s *SettingService) IsWorkday(day time.Time) (bool, error) {
 	return ParseWorkdays(st.Workdays)[WeekdayToInt(day.Weekday())], nil
 }
 
-// NotifyURL 读取当前配置的通知地址（shoutrrr URL）
+// NotifyURL 读取当前配置的通知地址（apprise URL）
 func (s *SettingService) NotifyURL() (string, error) {
 	st, err := s.repo.Get()
 	if err != nil {
@@ -122,7 +122,7 @@ func (s *SettingService) NotifyURL() (string, error) {
 	return st.NotifyURL, nil
 }
 
-// SaveNotifyURL 仅更新通知地址（shoutrrr URL），不影响工作日与偏好
+// SaveNotifyURL 仅更新通知地址（apprise URL），不影响工作日与偏好
 func (s *SettingService) SaveNotifyURL(url string) (*models.UserSetting, error) {
 	st, err := s.repo.Get()
 	if err != nil {

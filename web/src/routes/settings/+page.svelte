@@ -384,15 +384,15 @@
 	<div class="card setting-card">
 		<div class="setting-title">🔔 通知推送</div>
 		<p class="muted">
-			填写 <a href="https://containrrr.dev/shoutrrr/" target="_blank" rel="noreferrer">shoutrrr</a>
-			服务地址，即可接收养护提醒与天气策略调整通知。支持 Gotify、Telegram、企业微信、钉钉、Bark、Webhook、SMTP 等。留空表示不推送。
+			填写 <a href="https://appriseit.com/services/" target="_blank" rel="noreferrer">Apprise</a>
+			通知 URL，即可接收养护提醒与天气策略调整通知。支持 Telegram、Discord、Slack、Gotify、Bark、企业微信、钉钉、SMTP 等。留空表示不推送。
 		</p>
 		<div class="form-field notify-field">
-			<label for="">shoutrrr URL</label>
+			<label for="">Apprise URL</label>
 			<input
 				id="notify"
 				bind:value={notifyURL}
-				placeholder="例如：gotify://gotify.example.com/AaBbCcDdEeFf"
+				placeholder="例如：telegram://bottoken@chatid"
 				spellcheck="false"
 				autocomplete="off"
 			/>
