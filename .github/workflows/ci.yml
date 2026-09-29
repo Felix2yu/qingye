@@ -3,58 +3,45 @@ name: CI
 on:
   push:
     branches: [main]
+    tags: ['v*']
   pull_request:
     branches: [main]
+  schedule:
+    - cron: '0 3 * * 1'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
-  go-test:
-    name: Go Tests
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v7
+  test:
+    uses: Felix2yu/.github/.github/workflows/reusable-test.yml@v1
+    secrets:
+      CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
+    with:
+      go-dir: server
+      test-packages: ./...
+      # SQLite 驱动是 mattn/go-sqlite3，测试期必须开 CGO
+      test-cgo: '1'
+      web-dir: web
 
-      - uses: actions/setup-go@v7
-        with:
-          go-version: '1.27'
-
-      - name: Install CGO dependencies
-        run: sudo apt-get update && sudo apt-get install -y gcc
-
-      - name: Download dependencies
-        run: go mod download
-        working-directory: server
-
-      - name: Run tests with coverage
-        run: go test -v -race -coverprofile=coverage.out -covermode=atomic ./...
-        working-directory: server
-
-      - name: Upload Go coverage to Codecov
-        uses: codecov/codecov-action@v7
-        with:
-          files: server/coverage.out
-          flags: go
-          fail_ci_if_error: false
-
-  web-check:
-    name: Web Check & Test
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v7
-
-      - uses: actions/setup-node@v7
-        with:
-          node-version: '22'
-          cache: 'npm'
-          cache-dependency-path: web/package-lock.json
-
-      - name: Install dependencies
-        run: npm ci
-        working-directory: web
-
-      - name: Type check
-        run: npm run check
-        working-directory: web
-
-      - name: Run tests
-        run: npm run test
-        working-directory: web
+  image:
+    needs: test
+    permissions:
+      contents: read
+      packages: write
+    uses: Felix2yu/.github/.github/workflows/reusable-image.yml@v1
+    with:
+      go-dir: server
+      binary-name: qingye
+      image-name: ghcr.io/felix2yu/qingye
+      # 运行时镜像是 alpine，CGO 产物必须静态链接到 musl
+      cgo: musl
+      web-dir: web
+      frontend-stage-command: |
+        mkdir -p dist
+        cp -R web/build/. dist/

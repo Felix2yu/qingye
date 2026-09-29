@@ -1,31 +1,17 @@
-# ---- 阶段 1：构建前端（SvelteKit 静态 SPA） ----
-FROM node:26-alpine AS web-build
-WORKDIR /web
-COPY web/package.json web/package-lock.json ./
-RUN npm ci
-COPY web/ ./
-RUN npm run build
+# 「清野」运行时镜像：二进制与前端产物均由 CI 预编译后拼装。
+#
+# 编译期依赖（node_modules、Go 工具链、gcc/musl-dev）全部留在 CI，不进镜像。
+# 前端产物不打进二进制，运行时由 WEB_DIR 指向 /app/web。
 
-# ---- 阶段 2：构建后端（Go 二进制） ----
-FROM golang:1.27-alpine AS server-build
-WORKDIR /server
-# 启用 CGO 以使用 mattn/go-sqlite3（SQLite 驱动）
-RUN apk add --no-cache gcc musl-dev
-COPY server/go.mod server/go.sum ./
-RUN go mod download
-COPY server/ ./
-RUN CGO_ENABLED=1 go build -ldflags="-s -w" -o /out/qingye .
-
-# ---- 阶段 3：运行镜像 ----
 FROM alpine:3.24
+
 WORKDIR /app
+
 RUN apk add --no-cache ca-certificates tzdata && \
     mkdir -p /app/data /app/uploads /app/web
 
-# 后端二进制
-COPY --from=server-build /out/qingye /app/qingye
-# 前端静态产物
-COPY --from=web-build /web/build /app/web
+COPY --chmod=755 bin/qingye /app/qingye
+COPY dist /app/web
 
 ENV PORT=8081 \
     DB_PATH=/app/data/qingye.db \
