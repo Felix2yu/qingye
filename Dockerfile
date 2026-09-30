@@ -1,6 +1,7 @@
 # 「清野」运行时镜像：二进制与前端产物均由 CI 预编译后拼装。
 #
-# 编译期依赖（node_modules、Go 工具链、gcc/musl-dev）全部留在 CI，不进镜像。
+# 编译期依赖（node_modules、Go 工具链）全部留在 CI，不进镜像。
+# SQLite 为纯 Go 驱动（glebarez/sqlite），无需 gcc/musl-dev。
 # 前端产物不打进二进制，运行时由 WEB_DIR 指向 /app/web。
 
 FROM alpine:3.24

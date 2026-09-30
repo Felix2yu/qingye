@@ -25,8 +25,6 @@ jobs:
     with:
       go-dir: server
       test-packages: ./...
-      # SQLite 驱动是 mattn/go-sqlite3，测试期必须开 CGO
-      test-cgo: '1'
       web-dir: web
 
   image:
@@ -39,8 +37,8 @@ jobs:
       go-dir: server
       binary-name: qingye
       image-name: ghcr.io/felix2yu/qingye
-      # 运行时镜像是 alpine，CGO 产物必须静态链接到 musl
-      cgo: musl
+      # 纯 Go SQLite 驱动（glebarez/sqlite），无需 CGO，静态编译即可
+      cgo: off
       web-dir: web
       frontend-stage-command: |
         mkdir -p dist
