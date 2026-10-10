@@ -2,20 +2,32 @@
 
 const WEEKDAYS = ['周日', '周一', '周二', '周三', '周四', '周五', '周六'];
 
+// date-only 串（YYYY-MM-DD）按 ES 规范会被解析为 UTC 午夜，再与 getFullYear/getDate 这类
+// 本地取值方法配合时，会在 UTC-x 时区整体退到前一天。本模块的日期一律按"本地日历日"理解，
+// 故纯日期串走本地解析；带时间的 ISO 串保留原生解析（含时区偏移）。
+function toLocalDate(d: string | Date): Date {
+	if (d instanceof Date) return d;
+	if (/^\d{4}-\d{2}-\d{2}$/.test(d)) {
+		const [y, m, day] = d.split('-').map(Number);
+		return new Date(y, m - 1, day);
+	}
+	return new Date(d);
+}
+
 export function formatDate(d: string | Date): string {
-	const date = typeof d === 'string' ? new Date(d) : d;
+	const date = toLocalDate(d);
 	return `${date.getMonth() + 1}月${date.getDate()}日 ${WEEKDAYS[date.getDay()]}`;
 }
 
 export function formatDateTime(d: string | Date): string {
-	const date = typeof d === 'string' ? new Date(d) : d;
+	const date = toLocalDate(d);
 	const pad = (n: number) => String(n).padStart(2, '0');
 	return `${date.getMonth() + 1}月${date.getDate()}日 ${pad(date.getHours())}:${pad(date.getMinutes())}`;
 }
 
 // 相对今天的到期描述：今天 / 明天 / 昨天(逾期) / X天后 / 逾期X天
 export function dueLabel(nextDue: string): { text: string; overdue: boolean; today: boolean } {
-	const due = new Date(nextDue);
+	const due = toLocalDate(nextDue);
 	const now = new Date();
 	const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
 	const startOfDue = new Date(due.getFullYear(), due.getMonth(), due.getDate());
@@ -108,7 +120,7 @@ export const ROOM_ICONS: { value: string; label: string }[] = [
 // 紧凑日期（YYYY-MM-DD），用于延期标签等
 export function fmtDate(s: string | null | undefined): string {
 	if (!s) return '';
-	const d = new Date(s);
+	const d = toLocalDate(s);
 	if (isNaN(d.getTime())) return '';
 	return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 }

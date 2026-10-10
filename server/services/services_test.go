@@ -334,10 +334,34 @@ func TestTaskService_List_Today(t *testing.T) {
 		t.Fatalf("List = %d, want 2", len(list))
 	}
 
-	// Today
+	// Today 只统计"设置中的工作日"。旧写法依赖默认工作制（周一至周五），
+	// 导致用例在周末运行必然失败（CI 周六/周日跑就红），这里显式放开整周，与星期无关。
+	setting := NewSettingService()
+	if _, err := setting.Update([]int{1, 2, 3, 4, 5, 6, 7}, nil); err != nil {
+		t.Fatal(err)
+	}
 	today, _ := svc.Today()
 	if len(today) != 1 {
 		t.Fatalf("Today = %d, want 1", len(today))
+	}
+
+	// 休息日分支：把今天排除出工作日集合，Today 应返回空（任务顺延，不过期）
+	todayIdx := WeekdayToInt(time.Now().Weekday())
+	withoutToday := make([]int, 0, 6)
+	for d := 1; d <= 7; d++ {
+		if d != todayIdx {
+			withoutToday = append(withoutToday, d)
+		}
+	}
+	if _, err := setting.Update(withoutToday, nil); err != nil {
+		t.Fatal(err)
+	}
+	rest, err := svc.Today()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(rest) != 0 {
+		t.Fatalf("Today on rest day = %d, want 0", len(rest))
 	}
 }
 

@@ -53,8 +53,11 @@ describe('dueLabel', () => {
 	const yesterday = new Date(today);
 	yesterday.setDate(yesterday.getDate() - 1);
 
+	// 按本地日历构造日期串：被测函数以本地时区比较，用 toISOString() 取 UTC 日期会在
+	// UTC+x 的凌晨（如 CST 00:00-08:00）与 UTC-x 的傍晚各偏移一天，导致用例随时区漂移
 	function fmt(d: Date) {
-		return d.toISOString().split('T')[0];
+		const pad = (n: number) => String(n).padStart(2, '0');
+		return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
 	}
 
 	it('今天', () => {
