@@ -2,9 +2,28 @@
 <html lang="zh-CN">
 	<head>
 		<meta charset="utf-8" />
-		<link rel="icon" href="%sveltekit.assets%/favicon.svg" type="image/svg+xml" />
-		<link rel="apple-touch-icon" href="%sveltekit.assets%/apple-touch-icon.png" />
 		<meta name="viewport" content="width=device-width, initial-scale=1" />
+
+		<!-- 主题色：静态默认值兜底（安装卡片 / 无 JS 场景），下方脚本按用户偏好二次覆盖 -->
+		<meta name="theme-color" content="#f7f5ef" />
+
+		<!-- iOS / Android 安装元信息（契约见 ../../PWA规范.md） -->
+		<meta name="mobile-web-app-capable" content="yes" />
+		<meta name="apple-mobile-web-app-capable" content="yes" />
+		<meta name="apple-mobile-web-app-status-bar-style" content="default" />
+		<meta name="apple-mobile-web-app-title" content="青野集" />
+		<meta name="format-detection" content="telephone=no" />
+
+		<!-- manifest 必须在此显式声明：@vite-pwa/sveltekit 会移除做 HTML 注入的
+		     vite-plugin-pwa:build 插件，不会自动注入；SW 注册见 src/lib/pwa.ts -->
+		<link rel="manifest" href="%sveltekit.assets%/manifest.webmanifest" />
+
+		<!-- 图标家族 -->
+		<link rel="icon" href="%sveltekit.assets%/favicon.ico" sizes="16x16 32x32 48x48" />
+		<link rel="icon" href="%sveltekit.assets%/favicon.svg" type="image/svg+xml" />
+		<link rel="icon" href="%sveltekit.assets%/icon-192.png" type="image/png" sizes="192x192" />
+		<link rel="apple-touch-icon" href="%sveltekit.assets%/apple-touch-icon.png" sizes="180x180" />
+
 		<script>
 			// 首屏主题预设：读取本地偏好，避免暗色用户白屏闪烁
 			(function () {
@@ -15,10 +34,9 @@
 						m === 'dark' ||
 						(m === 'auto' && window.matchMedia('(prefers-color-scheme: dark)').matches);
 					document.documentElement.setAttribute('data-theme', dark ? 'dark' : 'light');
-					var meta = document.createElement('meta');
-					meta.name = 'theme-color';
-					meta.content = dark ? '#141812' : '#f7f5ef';
-					document.head.appendChild(meta);
+					// 覆盖上面的静态 theme-color（用户可强制主题，故不能只依赖 prefers-color-scheme）
+					var meta = document.querySelector('meta[name="theme-color"]');
+					if (meta) meta.setAttribute('content', dark ? '#141812' : '#f7f5ef');
 				} catch (e) {
 					/* 忽略 */
 				}

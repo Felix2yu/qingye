@@ -8,19 +8,35 @@ export default defineConfig({
 		...SvelteKitPWA({
 			// 仅缓存壳页与静态资源，不缓存 POST，避免数据不一致
 			registerType: 'autoUpdate',
-			includeAssets: ['favicon.svg', 'icon-192.png', 'icon-512.png', 'apple-touch-icon.png'],
+			includeAssets: [
+				'favicon.ico',
+				'favicon.svg',
+				'icon-192.png',
+				'icon-512.png',
+				'icon-maskable-192.png',
+				'icon-maskable-512.png',
+				'apple-touch-icon.png'
+			],
 			manifest: {
+				id: '/',
 				name: '青野集 · 家庭园艺植物记录与养护',
 				short_name: '青野集',
 				description: '家庭园艺植物记录与养护工具',
+				lang: 'zh-CN',
+				dir: 'ltr',
+				scope: '/',
 				theme_color: '#43a047',
 				background_color: '#f7faf5',
 				display: 'standalone',
+				display_override: ['standalone', 'minimal-ui'],
+				orientation: 'portrait-primary',
+				categories: ['lifestyle', 'productivity'],
 				start_url: '/',
 				icons: [
 					{ src: 'icon-192.png', sizes: '192x192', type: 'image/png', purpose: 'any' },
 					{ src: 'icon-512.png', sizes: '512x512', type: 'image/png', purpose: 'any' },
-					{ src: 'icon-512.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' },
+					{ src: 'icon-maskable-192.png', sizes: '192x192', type: 'image/png', purpose: 'maskable' },
+					{ src: 'icon-maskable-512.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' },
 					{ src: 'favicon.svg', sizes: 'any', type: 'image/svg+xml', purpose: 'any' }
 				]
 			},

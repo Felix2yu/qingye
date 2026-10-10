@@ -4,6 +4,7 @@
 	import { toast } from '$lib/stores';
 	import { theme } from '$lib/theme.svelte';
 	import { initOfflineSync } from '$lib/offline';
+	import { registerServiceWorker } from '$lib/pwa';
 	import { browser } from '$app/environment';
 	import { fly } from 'svelte/transition';
 	import { onMount } from 'svelte';
@@ -15,6 +16,7 @@
 	onMount(() => {
 		theme.init();
 		initOfflineSync();
+		registerServiceWorker();
 		const on = () => (online = true);
 		const off = () => (online = false);
 		window.addEventListener('online', on);
