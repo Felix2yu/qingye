@@ -1,6 +1,6 @@
 // 与后端统一响应结构 {code, message, data} 对应的封装
 
-import { browser } from '$app/environment';
+import { browser } from '$app/env';
 import { showToast } from './stores';
 import { enqueue, prepareRequest } from './offline';
 

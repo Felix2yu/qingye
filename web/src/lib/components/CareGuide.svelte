@@ -1,6 +1,6 @@
 <script lang="ts">
-	import Icon from '$lib/components/Icon.svelte';
-	import { parseCareGuide } from '$lib/careGuide';
+	import Icon from '#lib/components/Icon.svelte';
+	import { parseCareGuide } from '#lib/careGuide.js';
 
 	let { guide }: { guide: string | null | undefined } = $props();
 

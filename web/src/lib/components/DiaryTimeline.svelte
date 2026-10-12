@@ -1,7 +1,7 @@
 <script lang="ts">
-	import type { PhotoDiary } from '$lib/api';
-	import { imgUrl } from '$lib/api';
-	import { formatDate } from '$lib/format';
+	import type { PhotoDiary } from '#lib/api.js';
+	import { imgUrl } from '#lib/api.js';
+	import { formatDate } from '#lib/format.js';
 	import { goto } from '$app/navigation';
 
 	let { items, onDelete }: { items: PhotoDiary[]; onDelete?: (id: number) => void } = $props();

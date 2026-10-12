@@ -1,11 +1,11 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
-	import { api } from '$lib/api';
-	import type { Plant, Task } from '$lib/api';
-	import { showToast } from '$lib/stores';
-	import TaskItem from '$lib/components/TaskItem.svelte';
-	import { TASK_TYPE_LABEL, TASK_TYPES } from '$lib/format';
-	import Icon from '$lib/components/Icon.svelte';
+	import { api } from '#lib/api.js';
+	import type { Plant, Task } from '#lib/api.js';
+	import { showToast } from '#lib/stores.js';
+	import TaskItem from '#lib/components/TaskItem.svelte';
+	import { TASK_TYPE_LABEL, TASK_TYPES } from '#lib/format.js';
+	import Icon from '#lib/components/Icon.svelte';
 	import { goto } from '$app/navigation';
 
 	let tasks = $state<Task[]>([]);

@@ -3,7 +3,7 @@
 // 恢复联网后按顺序回放，并刷新页面数据。读操作（GET）走 vite-pwa 的运行时缓存。
 
 import { invalidateAll } from '$app/navigation';
-import { browser } from '$app/environment';
+import { browser } from '$app/env';
 import { showToast } from './stores';
 
 const DB_NAME = 'qingye-offline';

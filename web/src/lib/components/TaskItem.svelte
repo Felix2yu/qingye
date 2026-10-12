@@ -1,8 +1,8 @@
 <script lang="ts">
-	import type { Task } from '$lib/api';
-	import { api } from '$lib/api';
-	import { dueLabel, TASK_TYPE_EMOJI, TASK_TYPE_LABEL, formatDateTime } from '$lib/format';
-	import { showToast } from '$lib/stores';
+	import type { Task } from '#lib/api.js';
+	import { api } from '#lib/api.js';
+	import { dueLabel, TASK_TYPE_EMOJI, TASK_TYPE_LABEL, formatDateTime } from '#lib/format.js';
+	import { showToast } from '#lib/stores.js';
 
 	let {
 		task,

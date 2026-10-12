@@ -1,8 +1,8 @@
 <script lang="ts">
-	import type { Plant } from '$lib/api';
-	import { imgUrl } from '$lib/api';
+	import type { Plant } from '#lib/api.js';
+	import { imgUrl } from '#lib/api.js';
 	import { goto } from '$app/navigation';
-	import Icon from '$lib/components/Icon.svelte';
+	import Icon from '#lib/components/Icon.svelte';
 
 	let { plant, pending = 0 }: { plant: Plant; pending?: number } = $props();
 

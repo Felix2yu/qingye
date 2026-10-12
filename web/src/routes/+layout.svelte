@@ -1,11 +1,11 @@
 <script lang="ts">
 	import '../app.css';
-	import NavBar from '$lib/components/NavBar.svelte';
-	import { toast } from '$lib/stores';
-	import { theme } from '$lib/theme.svelte';
-	import { initOfflineSync } from '$lib/offline';
-	import { registerServiceWorker } from '$lib/pwa';
-	import { browser } from '$app/environment';
+	import NavBar from '#lib/components/NavBar.svelte';
+	import { toast } from '#lib/stores.js';
+	import { theme } from '#lib/theme.svelte.js';
+	import { initOfflineSync } from '#lib/offline.js';
+	import { registerServiceWorker } from '#lib/pwa.js';
+	import { browser } from '$app/env';
 	import { fly } from 'svelte/transition';
 	import { onMount } from 'svelte';
 

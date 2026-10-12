@@ -1,4 +1,4 @@
-import { browser } from '$app/environment';
+import { browser } from '$app/env';
 import { api, type UserSetting } from './api';
 
 type ToastData = { id: number; text: string; type: 'ok' | 'err' | 'info' } | null;

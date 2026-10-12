@@ -1,10 +1,10 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
-	import { api } from '$lib/api';
-	import type { WeatherConfig, WeatherLog, SyncReport } from '$lib/api';
-	import { showToast, settings } from '$lib/stores';
-	import { theme, THEME_MODE_LABEL, type ThemeMode } from '$lib/theme.svelte';
-	import Icon from '$lib/components/Icon.svelte';
+	import { api } from '#lib/api.js';
+	import type { WeatherConfig, WeatherLog, SyncReport } from '#lib/api.js';
+	import { showToast, settings } from '#lib/stores.js';
+	import { theme, THEME_MODE_LABEL, type ThemeMode } from '#lib/theme.svelte.js';
+	import Icon from '#lib/components/Icon.svelte';
 
 	const THEME_OPTIONS: { mode: ThemeMode; icon: string; desc: string }[] = [
 		{ mode: 'auto', icon: 'monitor', desc: '跟随系统亮暗变化' },

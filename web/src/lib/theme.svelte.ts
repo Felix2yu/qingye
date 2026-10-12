@@ -1,6 +1,6 @@
 // 主题状态管理：亮色 / 暗色 / 跟随系统
 // 「自动」模式监听系统偏好变化并实时切换；偏好持久化到 localStorage
-import { browser } from '$app/environment';
+import { browser } from '$app/env';
 
 export type ThemeMode = 'light' | 'dark' | 'auto';
 export type ResolvedTheme = 'light' | 'dark';

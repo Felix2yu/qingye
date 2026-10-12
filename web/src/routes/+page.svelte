@@ -1,9 +1,9 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
-	import { api } from '$lib/api';
-	import type { Task, WeatherCurrent } from '$lib/api';
-	import { greeting, formatDate } from '$lib/format';
-	import TaskItem from '$lib/components/TaskItem.svelte';
+	import { api } from '#lib/api.js';
+	import type { Task, WeatherCurrent } from '#lib/api.js';
+	import { greeting, formatDate } from '#lib/format.js';
+	import TaskItem from '#lib/components/TaskItem.svelte';
 	import { goto } from '$app/navigation';
 
 	let today = $state<Task[]>([]);
