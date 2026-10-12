@@ -1,10 +1,10 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
-	import { api, imgUrl } from '$lib/api';
-	import type { Plant, PhotoDiary } from '$lib/api';
-	import { showToast } from '$lib/stores';
-	import { compressImage } from '$lib/compress';
-	import DiaryTimeline from '$lib/components/DiaryTimeline.svelte';
+	import { api, imgUrl } from '#lib/api.js';
+	import type { Plant, PhotoDiary } from '#lib/api.js';
+	import { showToast } from '#lib/stores.js';
+	import { compressImage } from '#lib/compress.js';
+	import DiaryTimeline from '#lib/components/DiaryTimeline.svelte';
 	import { page } from '$app/state';
 
 	let items = $state<PhotoDiary[]>([]);

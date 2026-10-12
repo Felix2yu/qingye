@@ -1,10 +1,10 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
-	import { api } from '$lib/api';
-	import type { PlantLibrary } from '$lib/api';
-	import { showToast } from '$lib/stores';
-	import { zhCategory, zhOrigin } from '$lib/plant-zh';
-	import CareGuide from '$lib/components/CareGuide.svelte';
+	import { api } from '#lib/api.js';
+	import type { PlantLibrary } from '#lib/api.js';
+	import { showToast } from '#lib/stores.js';
+	import { zhCategory, zhOrigin } from '#lib/plant-zh.js';
+	import CareGuide from '#lib/components/CareGuide.svelte';
 
 	let list = $state<PlantLibrary[]>([]);
 	let keyword = $state('');

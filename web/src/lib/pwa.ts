@@ -1,11 +1,11 @@
-import { browser } from '$app/environment';
+import { browser } from '$app/env';
 
 /**
  * 注册 Service Worker（构建时由 vite-plugin-pwa 生成 `/sw.js`）。
  *
- * 为什么必须显式注册：`@vite-pwa/sveltekit` 会**移除**负责 HTML 注入的 `vite-plugin-pwa:build`
- * 插件，其替代者只做产物生成、没有 `transformIndexHtml`。因此 SvelteKit 下即使配了
- * `registerType: 'autoUpdate'` 也不会自动注册，必须在应用代码里调用 `virtual:pwa-register`。
+ * 为什么必须显式注册：SvelteKit 3 不再支持 `transformIndexHtml` 钩子，
+ * vite-plugin-pwa 依赖该钩子完成的 HTML 注入（含自动注册脚本）不会生效。
+ * 因此必须在应用代码里调用 `virtual:pwa-register`，注册逻辑不能交给插件。
  * 这是 PWA规范.md 第四节对 SvelteKit 的约定写法（吾身 diarum 亦同）。
  */
 export function registerServiceWorker(): void {

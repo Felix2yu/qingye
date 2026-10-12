@@ -2,7 +2,7 @@
 	import { page } from '$app/state';
 	import Icon from './Icon.svelte';
 	import ThemeToggle from './ThemeToggle.svelte';
-	import { theme, THEME_MODE_LABEL } from '$lib/theme.svelte';
+	import { theme, THEME_MODE_LABEL } from '#lib/theme.svelte.js';
 
 	const items = [
 		{ href: '/', label: '今日', icon: 'leaf' },

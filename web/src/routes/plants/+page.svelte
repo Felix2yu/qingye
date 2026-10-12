@@ -1,12 +1,12 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
-	import { api } from '$lib/api';
-	import type { Plant, Room, Task, OnlineCandidate, PlantLibrary } from '$lib/api';
-	import { showToast } from '$lib/stores';
-	import { imgUrl } from '$lib/api';
-	import Icon from '$lib/components/Icon.svelte';
-	import { ROOM_ICONS } from '$lib/format';
-	import PlantCard from '$lib/components/PlantCard.svelte';
+	import { api } from '#lib/api.js';
+	import type { Plant, Room, Task, OnlineCandidate, PlantLibrary } from '#lib/api.js';
+	import { showToast } from '#lib/stores.js';
+	import { imgUrl } from '#lib/api.js';
+	import Icon from '#lib/components/Icon.svelte';
+	import { ROOM_ICONS } from '#lib/format.js';
+	import PlantCard from '#lib/components/PlantCard.svelte';
 
 	let plants = $state<Plant[]>([]);
 	let rooms = $state<Room[]>([]);

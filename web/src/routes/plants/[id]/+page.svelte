@@ -1,12 +1,12 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import { page } from '$app/state';
-	import { api, imgUrl } from '$lib/api';
-	import type { Plant, Task, PhotoDiary, CareLog } from '$lib/api';
-	import { dueLabel, TASK_TYPES, TASK_TYPE_EMOJI, TASK_TYPE_LABEL, formatDate, formatDateTime, careTypeLabel, fmtDate } from '$lib/format';
-	import Icon from '$lib/components/Icon.svelte';
-	import CareGuide from '$lib/components/CareGuide.svelte';
-	import { showToast } from '$lib/stores';
+	import { api, imgUrl } from '#lib/api.js';
+	import type { Plant, Task, PhotoDiary, CareLog } from '#lib/api.js';
+	import { dueLabel, TASK_TYPES, TASK_TYPE_EMOJI, TASK_TYPE_LABEL, formatDate, formatDateTime, careTypeLabel, fmtDate } from '#lib/format.js';
+	import Icon from '#lib/components/Icon.svelte';
+	import CareGuide from '#lib/components/CareGuide.svelte';
+	import { showToast } from '#lib/stores.js';
 	import { goto } from '$app/navigation';
 
 	const id = Number(page.params.id);

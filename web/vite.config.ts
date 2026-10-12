@@ -1,13 +1,32 @@
+import adapter from '@sveltejs/adapter-static';
 import { sveltekit } from '@sveltejs/kit/vite';
-import { SvelteKitPWA } from '@vite-pwa/sveltekit';
+import { vitePreprocess } from '@sveltejs/vite-plugin-svelte';
+import { VitePWA } from 'vite-plugin-pwa';
 import { defineConfig } from 'vitest/config';
 
 export default defineConfig({
 	plugins: [
-		sveltekit(),
-		...SvelteKitPWA({
+		// SvelteKit 3 起配置统一切入 sveltekit() 插件（svelte.config.js 已移除）
+		sveltekit({
+			preprocess: vitePreprocess(),
+			compilerOptions: {
+				// 全局强制 Svelte 5 runes 模式，锁定迁移成果，防止误写遗留语法而不报错
+				runes: true
+			},
+			// 单镜像自部署：构建为静态 SPA，由后端 Go 直接托管
+			adapter: adapter({
+				pages: 'build',
+				assets: 'build',
+				fallback: 'index.html',
+				precompress: false,
+				strict: false
+			})
+		}),
+		...VitePWA({
 			// 仅缓存壳页与静态资源，不缓存 POST，避免数据不一致
 			registerType: 'autoUpdate',
+			// sw.js 必须落进 kit 的 client 产物目录，才能被 adapter-static 一并复制进 build/
+			outDir: '.svelte-kit/output/client',
 			includeAssets: [
 				'favicon.ico',
 				'favicon.svg',
@@ -41,11 +60,10 @@ export default defineConfig({
 				]
 			},
 			workbox: {
-				// 阻断插件默认注入 prerendered/** 空 glob：本应用为纯客户端 SPA（ssr=false/prerender=false），
-				// 无预渲染产物，该空 glob 会触发 Workbox 警告。置空 modifyURLPrefix 可跳过 buildGlobPatterns 自动追加。
-				modifyURLPrefix: {},
-				// 仅预缓存真实存在的 client 构建产物（壳页与静态资源），不再包含无意义的 prerendered 模式
-				globPatterns: ['client/**/*.{js,css,ico,png,svg,webp,webmanifest}'],
+				// kit 3 下 @vite-pwa/sveltekit 不再生成 sw（其 closeBundle 挂在已消失的 SSR 构建阶段），
+				// 改由 vite-plugin-pwa 直连：globDirectory 直接指向 client 产物目录，pattern 去掉 client/ 前缀
+				globDirectory: '.svelte-kit/output/client',
+				globPatterns: ['**/*.{js,css,ico,png,svg,webp,webmanifest}'],
 				// API 与上传走网络
 				navigateFallbackDenylist: [/^\/api/],
 				runtimeCaching: [

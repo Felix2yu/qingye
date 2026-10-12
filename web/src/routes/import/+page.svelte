@@ -1,9 +1,9 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
-	import { api, type ImportPreview, type ImportResult, type ImportRow } from '$lib/api';
-	import { showToast } from '$lib/stores';
-	import { TASK_TYPE_LABEL } from '$lib/format';
-	import type { Plant } from '$lib/api';
+	import { api, type ImportPreview, type ImportResult, type ImportRow } from '#lib/api.js';
+	import { showToast } from '#lib/stores.js';
+	import { TASK_TYPE_LABEL } from '#lib/format.js';
+	import type { Plant } from '#lib/api.js';
 
 	type Mode = 'plants' | 'tasks' | 'template';
 	let mode = $state<Mode>('plants');

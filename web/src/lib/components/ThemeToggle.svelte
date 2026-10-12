@@ -1,6 +1,6 @@
 <script lang="ts">
 	import Icon from './Icon.svelte';
-	import { theme, THEME_MODE_LABEL, type ThemeMode } from '$lib/theme.svelte';
+	import { theme, THEME_MODE_LABEL, type ThemeMode } from '#lib/theme.svelte.js';
 
 	const ORDER: ThemeMode[] = ['light', 'dark', 'auto'];
 	// 各模式对应的图标与提示
