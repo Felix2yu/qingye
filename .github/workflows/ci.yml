@@ -26,6 +26,9 @@ jobs:
       go-dir: server
       test-packages: ./...
       web-dir: web
+      # web 的 build 脚本只有 vite build，不做类型检查；不显式跑 check 的话
+      # .svelte 里的类型错误可以躺在绿的 CI 上（同 diarum/guanfu 的处理）。
+      web-build-command: pnpm run check && pnpm run build
 
   image:
     needs: test
