@@ -9,18 +9,18 @@ import { browser } from '$app/env';
  * 这是 PWA规范.md 第四节对 SvelteKit 的约定写法（吾身 diarum 亦同）。
  */
 export function registerServiceWorker(): void {
-	if (!browser) return;
-	// 仅生产构建注册：dev 下无预缓存产物，注册只会带来噪音
-	if (!import.meta.env.PROD) return;
-	if (!window.isSecureContext) return;
-	if (!('serviceWorker' in navigator)) return;
+  if (!browser) return;
+  // 仅生产构建注册：dev 下无预缓存产物，注册只会带来噪音
+  if (!import.meta.env.PROD) return;
+  if (!window.isSecureContext) return;
+  if (!('serviceWorker' in navigator)) return;
 
-	void (async () => {
-		try {
-			const { registerSW } = await import('virtual:pwa-register');
-			registerSW({ immediate: true });
-		} catch (e) {
-			console.warn('[PWA] Service Worker 注册失败', e);
-		}
-	})();
+  void (async () => {
+    try {
+      const { registerSW } = await import('virtual:pwa-register');
+      registerSW({ immediate: true });
+    } catch (e) {
+      console.warn('[PWA] Service Worker 注册失败', e);
+    }
+  })();
 }

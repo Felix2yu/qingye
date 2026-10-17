@@ -1,100 +1,100 @@
 <script lang="ts">
-	import '../app.css';
-	import NavBar from '#lib/components/NavBar.svelte';
-	import { toast } from '#lib/stores.js';
-	import { theme } from '#lib/theme.svelte.js';
-	import { initOfflineSync } from '#lib/offline.js';
-	import { registerServiceWorker } from '#lib/pwa.js';
-	import { browser } from '$app/env';
-	import { fly } from 'svelte/transition';
-	import { onMount } from 'svelte';
+  import '../app.css';
+  import NavBar from '#lib/components/NavBar.svelte';
+  import { toast } from '#lib/stores.js';
+  import { theme } from '#lib/theme.svelte.js';
+  import { initOfflineSync } from '#lib/offline.js';
+  import { registerServiceWorker } from '#lib/pwa.js';
+  import { browser } from '$app/env';
+  import { fly } from 'svelte/transition';
+  import { onMount } from 'svelte';
 
-	let { children } = $props();
+  let { children } = $props();
 
-	let online = $state(browser ? navigator.onLine : true);
+  let online = $state(browser ? navigator.onLine : true);
 
-	onMount(() => {
-		theme.init();
-		initOfflineSync();
-		registerServiceWorker();
-		const on = () => (online = true);
-		const off = () => (online = false);
-		window.addEventListener('online', on);
-		window.addEventListener('offline', off);
-		return () => {
-			window.removeEventListener('online', on);
-			window.removeEventListener('offline', off);
-		};
-	});
+  onMount(() => {
+    theme.init();
+    initOfflineSync();
+    registerServiceWorker();
+    const on = () => (online = true);
+    const off = () => (online = false);
+    window.addEventListener('online', on);
+    window.addEventListener('offline', off);
+    return () => {
+      window.removeEventListener('online', on);
+      window.removeEventListener('offline', off);
+    };
+  });
 </script>
 
 {#if !online}
-	<div class="offline-banner">⚡ 离线模式 · 改动将自动保存，联网后同步</div>
+  <div class="offline-banner">⚡ 离线模式 · 改动将自动保存，联网后同步</div>
 {/if}
 
 <NavBar />
 
 <main class="content">
-	{@render children()}
+  {@render children()}
 </main>
 
 {#if toast.current}
-	<div class="toast {toast.current.type}" transition:fly={{ y: 20, duration: 200 }}>
-		{toast.current.text}
-	</div>
+  <div class="toast {toast.current.type}" transition:fly={{ y: 20, duration: 200 }}>
+    {toast.current.text}
+  </div>
 {/if}
 
 <style>
-	.content {
-		margin-left: 200px;
-		min-height: 100vh;
-	}
-	@media (max-width: 760px) {
-		.content {
-			margin-left: 0;
-		}
-	}
-	.toast {
-		position: fixed;
-		bottom: 90px;
-		left: 50%;
-		transform: translateX(-50%);
-		background: var(--toast-bg);
-		color: #fff;
-		padding: 10px 20px;
-		border-radius: 999px;
-		font-size: 14px;
-		z-index: 100;
-		box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
-	}
-	.toast.err {
-		background: var(--danger);
-	}
-	.toast.info {
-		background: #2563eb;
-	}
-	@media (max-width: 760px) {
-		.toast {
-			bottom: 80px;
-		}
-	}
-	.offline-banner {
-		position: fixed;
-		top: 0;
-		right: 0;
-		left: 200px;
-		z-index: 200;
-		background: #f59e0b;
-		color: #1f2937;
-		text-align: center;
-		font-size: 13px;
-		font-weight: 600;
-		padding: 6px 12px;
-		box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
-	}
-	@media (max-width: 760px) {
-		.offline-banner {
-			left: 0;
-		}
-	}
+  .content {
+    margin-left: 200px;
+    min-height: 100vh;
+  }
+  @media (max-width: 760px) {
+    .content {
+      margin-left: 0;
+    }
+  }
+  .toast {
+    position: fixed;
+    bottom: 90px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: var(--toast-bg);
+    color: #fff;
+    padding: 10px 20px;
+    border-radius: 999px;
+    font-size: 14px;
+    z-index: 100;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
+  }
+  .toast.err {
+    background: var(--danger);
+  }
+  .toast.info {
+    background: #2563eb;
+  }
+  @media (max-width: 760px) {
+    .toast {
+      bottom: 80px;
+    }
+  }
+  .offline-banner {
+    position: fixed;
+    top: 0;
+    right: 0;
+    left: 200px;
+    z-index: 200;
+    background: #f59e0b;
+    color: #1f2937;
+    text-align: center;
+    font-size: 13px;
+    font-weight: 600;
+    padding: 6px 12px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+  }
+  @media (max-width: 760px) {
+    .offline-banner {
+      left: 0;
+    }
+  }
 </style>
