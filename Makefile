@@ -7,6 +7,8 @@
 
 BIN  := bin/qingye
 MAIN := ./cmd/qingye
+# 默认 dev；发布时用 `make build VERSION=v1.2.3` 覆盖
+VERSION ?= dev
 
 # 默认端口：后端 8081（8080 常被其他应用占用），前端 5173
 SERVER_PORT ?= 8081
@@ -32,7 +34,7 @@ build: build-web
 	mkdir -p dist
 	cp -R web/build/. dist/
 	mkdir -p bin
-	go build -trimpath -ldflags "-s -w" -o $(BIN) $(MAIN)
+	go build -trimpath -ldflags "-s -w -X main.version=$(VERSION)" -o $(BIN) $(MAIN)
 
 # 后端单独起；前端热更新另开终端 make run-web
 dev: run-server

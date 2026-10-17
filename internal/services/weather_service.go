@@ -15,7 +15,6 @@ import (
 // WeatherService 智能养护策略：根据实时天气调整任务频率、推迟室外浇水、记录调整日志
 type WeatherService struct {
 	mu      sync.RWMutex
-	cfg     models.WeatherConfig
 	current *WeatherNow // 最近一次天气快照（内存缓存，供 API 展示）
 
 	logs  *repositories.WeatherLogRepo
@@ -173,7 +172,8 @@ func (s *WeatherService) applyStrategy(cfg models.WeatherConfig, now *WeatherNow
 			base = t.IntervalDays
 		}
 
-		var factor float64 = 1
+		// 下面的 switch 每个分支都会赋值，这里不给初值
+		var factor float64
 		switch {
 		case kind == models.WeatherKindCold:
 			// 低温：降低浇水与施肥频率（间隔变长）

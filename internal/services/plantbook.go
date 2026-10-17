@@ -178,7 +178,7 @@ func (p *PlantbookClient) getToken() (string, error) {
 		if len(msg) > 200 {
 			msg = msg[:200]
 		}
-		return "", fmt.Errorf("Plantbook 认证失败(%d)，请检查 client_id/client_secret：%s", resp.StatusCode, msg)
+		return "", fmt.Errorf("plantbook 认证失败(%d)，请检查 client_id/client_secret：%s", resp.StatusCode, msg) //nolint:staticcheck // ST1005：Plantbook 是产品名，首字母大写才准确
 	}
 	var tok struct {
 		AccessToken string `json:"access_token"`
@@ -473,7 +473,7 @@ func (p *PlantbookClient) tryGet(rawURL string) ([]byte, error) {
 		if len(msg) > 200 {
 			msg = msg[:200]
 		}
-		return nil, fmt.Errorf("Plantbook 返回 %d: %s", resp.StatusCode, msg)
+		return nil, fmt.Errorf("plantbook 返回 %d: %s", resp.StatusCode, msg) //nolint:staticcheck // ST1005：同上
 	}
 	return data, nil
 }

@@ -22,7 +22,7 @@ func TestOK(t *testing.T) {
 		t.Errorf("status = %d, want 200", w.Code)
 	}
 	var resp Response
-	json.Unmarshal(w.Body.Bytes(), &resp)
+	_ = json.Unmarshal(w.Body.Bytes(), &resp)
 	if resp.Code != 0 {
 		t.Errorf("code = %d, want 0", resp.Code)
 	}
@@ -40,7 +40,7 @@ func TestBadRequest(t *testing.T) {
 		t.Errorf("status = %d, want 400", w.Code)
 	}
 	var resp Response
-	json.Unmarshal(w.Body.Bytes(), &resp)
+	_ = json.Unmarshal(w.Body.Bytes(), &resp)
 	if resp.Code != 400 {
 		t.Errorf("code = %d, want 400", resp.Code)
 	}
