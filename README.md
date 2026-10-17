@@ -308,3 +308,7 @@ docker run -d --name qingye \
 ## 重置演示数据
 
 删除 `data/qingye.db` 并重启后端即可重新生成全部种子与演示数据（Docker 部署则删除 `qingye-data` 卷后重建容器）。
+
+## 许可证
+
+本项目以 [MIT](LICENSE) 发布，© 2026 Felix2yu。

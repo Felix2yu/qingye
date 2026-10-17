@@ -230,28 +230,28 @@ type pbCommonName struct {
 // 注意：环境阈值为基础字段；养护描述（光照/浇水/土壤/施肥/修剪）属可选
 // care 类别，请求必须带 ?include=care 才会返回。
 type pbDetail struct {
-	PID           string         `json:"pid"`
-	DisplayPID    string         `json:"display_pid"`
-	Alias         string         `json:"alias"`
-	Category      string         `json:"category"`
-	Origin        string         `json:"origin"`
-	Link          string         `json:"link"`
-	ImageURL      string         `json:"image_url"`
-	CommonNames   []pbCommonName `json:"common_names"`
-	MaxTemp       float64        `json:"max_temp"`
-	MinTemp       float64        `json:"min_temp"`
-	MaxLightMMOL  float64        `json:"max_light_mmol"`
-	MinLightMMOL  float64        `json:"min_light_mmol"`
-	MaxLightLux   float64        `json:"max_light_lux"`
-	MinLightLux   float64        `json:"min_light_lux"`
-	MaxEnvHumid   float64        `json:"max_env_humid"`
-	MinEnvHumid   float64        `json:"min_env_humid"`
-	MaxSoilMoist  float64        `json:"max_soil_moist"`
-	MinSoilMoist  float64        `json:"min_soil_moist"`
-	MaxSoilEC     float64        `json:"max_soil_ec"`
-	MinSoilEC     float64        `json:"min_soil_ec"`
-	MaxLight      string         `json:"max_light_human"`
-	MinLight      string         `json:"min_light_human"`
+	PID          string         `json:"pid"`
+	DisplayPID   string         `json:"display_pid"`
+	Alias        string         `json:"alias"`
+	Category     string         `json:"category"`
+	Origin       string         `json:"origin"`
+	Link         string         `json:"link"`
+	ImageURL     string         `json:"image_url"`
+	CommonNames  []pbCommonName `json:"common_names"`
+	MaxTemp      float64        `json:"max_temp"`
+	MinTemp      float64        `json:"min_temp"`
+	MaxLightMMOL float64        `json:"max_light_mmol"`
+	MinLightMMOL float64        `json:"min_light_mmol"`
+	MaxLightLux  float64        `json:"max_light_lux"`
+	MinLightLux  float64        `json:"min_light_lux"`
+	MaxEnvHumid  float64        `json:"max_env_humid"`
+	MinEnvHumid  float64        `json:"min_env_humid"`
+	MaxSoilMoist float64        `json:"max_soil_moist"`
+	MinSoilMoist float64        `json:"min_soil_moist"`
+	MaxSoilEC    float64        `json:"max_soil_ec"`
+	MinSoilEC    float64        `json:"min_soil_ec"`
+	MaxLight     string         `json:"max_light_human"`
+	MinLight     string         `json:"min_light_human"`
 
 	// 养护信息：官方文档未给出明确嵌套层级，这里同时兼容
 	// 「平铺在顶层」与「嵌套在 care 对象内」两种形态

@@ -9,7 +9,7 @@ type CareLog struct {
 	ID      uint      `gorm:"primaryKey" json:"id"`
 	PlantID uint      `gorm:"index" json:"plantId"`
 	Plant   Plant     `gorm:"foreignKey:PlantID" json:"plant,omitempty"`
-	Type    string    `gorm:"size:20;index" json:"type"`  // water / fertilize / repot / other
+	Type    string    `gorm:"size:20;index" json:"type"` // water / fertilize / repot / other
 	Title   string    `gorm:"size:100" json:"title"`
 	At      time.Time `gorm:"index" json:"at"`
 	Note    string    `gorm:"size:500" json:"note"`

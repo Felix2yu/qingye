@@ -33,7 +33,7 @@ func DefaultWeatherConfig() WeatherConfig {
 type WeatherLog struct {
 	ID        uint      `gorm:"primaryKey" json:"id"`
 	At        time.Time `gorm:"index" json:"at"`
-	Temp      float64   `json:"temp"`    // 触发时温度
+	Temp      float64   `json:"temp"`                     // 触发时温度
 	Condition string    `gorm:"size:30" json:"condition"` // 天气现象（晴/雨…）
 	Kind      string    `gorm:"size:30" json:"kind"`      // cold / hot / rain / refresh
 	TaskID    *uint     `gorm:"index" json:"taskId,omitempty"`

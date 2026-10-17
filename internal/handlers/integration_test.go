@@ -544,10 +544,10 @@ func TestIntegration_WeatherConfigCRUD(t *testing.T) {
 
 	// 保存配置
 	w = perform(r, "PUT", "/api/weather/config", map[string]any{
-		"city":      "北京",
-		"coldTemp":  5,
-		"hotTemp":   35,
-		"enabled":   true,
+		"city":     "北京",
+		"coldTemp": 5,
+		"hotTemp":  35,
+		"enabled":  true,
 	})
 	if w.Code != 200 {
 		t.Fatalf("save config: %d %s", w.Code, w.Body.String())

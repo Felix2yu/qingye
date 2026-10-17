@@ -10,15 +10,15 @@ import (
 
 // Config 应用配置
 type Config struct {
-	Port        string   // HTTP 监听端口
-	DBPath      string   // SQLite 数据库文件路径
-	UploadDir   string   // 照片上传目录
-	CORSOrigins []string // 允许跨域的来源
-	MaxUploadMB int64    // 单张照片大小上限（MB）
-	PlantbookClientID string // Plantbook OAuth2 client_id（在线植物资料，与 secret 同时配置才启用）
-	PlantbookSecret   string // Plantbook OAuth2 client_secret
-	PlantbookToken    string // 可选：直接使用的 access_token（对应官方 PLANTBOOK_ACCESS_TOKEN，调试用）
-	WebDir     string     // 前端静态构建目录（为空则只提供 API，不托管页面）
+	Port              string   // HTTP 监听端口
+	DBPath            string   // SQLite 数据库文件路径
+	UploadDir         string   // 照片上传目录
+	CORSOrigins       []string // 允许跨域的来源
+	MaxUploadMB       int64    // 单张照片大小上限（MB）
+	PlantbookClientID string   // Plantbook OAuth2 client_id（在线植物资料，与 secret 同时配置才启用）
+	PlantbookSecret   string   // Plantbook OAuth2 client_secret
+	PlantbookToken    string   // 可选：直接使用的 access_token（对应官方 PLANTBOOK_ACCESS_TOKEN，调试用）
+	WebDir            string   // 前端静态构建目录（为空则只提供 API，不托管页面）
 }
 
 // Load 从环境变量加载配置（支持 .env 文件）
@@ -26,11 +26,11 @@ func Load() *Config {
 	_ = godotenv.Load()
 
 	return &Config{
-		Port:        getEnv("PORT", "8081"),
-		DBPath:      getEnv("DB_PATH", "./data/qingye.db"),
-		UploadDir:   getEnv("UPLOAD_DIR", "./uploads"),
-		CORSOrigins: splitCSV(getEnv("CORS_ORIGINS", "http://localhost:5173")),
-		MaxUploadMB: int64(parseInt(getEnv("MAX_UPLOAD_MB", "10"), 10)),
+		Port:              getEnv("PORT", "8081"),
+		DBPath:            getEnv("DB_PATH", "./data/qingye.db"),
+		UploadDir:         getEnv("UPLOAD_DIR", "./uploads"),
+		CORSOrigins:       splitCSV(getEnv("CORS_ORIGINS", "http://localhost:5173")),
+		MaxUploadMB:       int64(parseInt(getEnv("MAX_UPLOAD_MB", "10"), 10)),
 		PlantbookClientID: getEnv("PLANTBOOK_CLIENT_ID", ""),
 		PlantbookSecret:   getEnv("PLANTBOOK_CLIENT_SECRET", ""),
 		PlantbookToken:    getEnv("PLANTBOOK_ACCESS_TOKEN", ""),

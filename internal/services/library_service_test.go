@@ -48,7 +48,7 @@ func TestLibraryService_Search(t *testing.T) {
 // 用下划线小写(monstera_deliciosa)比对。两侧必须经 aliasToPID 归一化到同一 key，
 // 否则已同步条目永远不命中、每轮都重请求。
 func TestAliasToPIDNormalizesSpacedPid(t *testing.T) {
-	spaced := aliasToPID("Monstera deliciosa")   // 形如 Plantbook 返回的空格学名
+	spaced := aliasToPID("Monstera deliciosa")     // 形如 Plantbook 返回的空格学名
 	underscore := aliasToPID("monstera_deliciosa") // 形如比对侧 guess
 	if spaced != "monstera_deliciosa" {
 		t.Fatalf("aliasToPID(spaced) = %q, want monstera_deliciosa", spaced)

@@ -49,18 +49,18 @@ func TaskTypeName(t string) string {
 
 // TaskService 任务业务：今日计算、完成、推迟、历史
 type TaskService struct {
-	tasks   *repositories.TaskRepo
-	logs    *repositories.TaskLogRepo
+	tasks    *repositories.TaskRepo
+	logs     *repositories.TaskLogRepo
 	careLogs *repositories.CareLogRepo
-	plants  *repositories.PlantRepo
+	plants   *repositories.PlantRepo
 }
 
 func NewTaskService() *TaskService {
 	return &TaskService{
-		tasks:   repositories.NewTaskRepo(),
-		logs:    repositories.NewTaskLogRepo(),
+		tasks:    repositories.NewTaskRepo(),
+		logs:     repositories.NewTaskLogRepo(),
 		careLogs: repositories.NewCareLogRepo(),
-		plants:  repositories.NewPlantRepo(),
+		plants:   repositories.NewPlantRepo(),
 	}
 }
 

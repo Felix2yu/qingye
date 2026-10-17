@@ -18,7 +18,7 @@ type WeatherService struct {
 	cfg     models.WeatherConfig
 	current *WeatherNow // 最近一次天气快照（内存缓存，供 API 展示）
 
-	logs *repositories.WeatherLogRepo
+	logs  *repositories.WeatherLogRepo
 	tasks *repositories.TaskRepo
 	rooms *repositories.RoomRepo
 }

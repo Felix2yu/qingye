@@ -359,7 +359,7 @@ func aliasToPID(latin string) string {
 // 其运行目录写入，本地开发沙箱无法预置到用户运行时）。运行时新发现的未收录项会追加
 // 进 data/plantbook_sync_state.json 持久化。
 var knownNotFound = []string{
-	"dracaena_reflexa",      // 百合竹
+	"dracaena_reflexa",       // 百合竹
 	"spathiphyllum_wallisii", // 白掌
 }
 

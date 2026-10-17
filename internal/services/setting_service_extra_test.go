@@ -106,4 +106,3 @@ func TestSettingService_DigestHour_InvalidFallback(t *testing.T) {
 		t.Errorf("invalid digest hour = %d, want fallback 8", h)
 	}
 }
-
