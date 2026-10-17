@@ -32,7 +32,7 @@ func setupTest(t *testing.T) *gin.Engine {
 	if err != nil {
 		t.Fatal(err)
 	}
-	db.AutoMigrate(
+	_ = db.AutoMigrate(
 		&models.Plant{},
 		&models.Room{},
 		&models.Task{},
@@ -311,9 +311,9 @@ func TestIntegration_DiaryCRUD(t *testing.T) {
 	// 创建日记（multipart form）
 	body := &bytes.Buffer{}
 	writer := multipart.NewWriter(body)
-	writer.WriteField("plantId", fmt.Sprintf("%d", plantID))
-	writer.WriteField("caption", "今天长新叶了")
-	writer.WriteField("takenAt", time.Now().Format(time.RFC3339))
+	_ = writer.WriteField("plantId", fmt.Sprintf("%d", plantID))
+	_ = writer.WriteField("caption", "今天长新叶了")
+	_ = writer.WriteField("takenAt", time.Now().Format(time.RFC3339))
 	// 创建一个假图片文件
 	part, _ := writer.CreateFormFile("image", "test.jpg")
 	part.Write([]byte("fake-jpg-data"))
@@ -441,7 +441,7 @@ func TestIntegration_ImportPreviewPlants(t *testing.T) {
 	// multipart form with CSV file
 	body := &bytes.Buffer{}
 	writer := multipart.NewWriter(body)
-	writer.WriteField("kind", "plants")
+	_ = writer.WriteField("kind", "plants")
 	part, _ := writer.CreateFormFile("file", "plants.csv")
 	part.Write([]byte("name,species,room,note\n绿萝,Epipremnum,客厅,测试\n龟背竹,Monstera,,"))
 	writer.Close()
@@ -465,7 +465,7 @@ func TestIntegration_ImportPreviewPlants_错误行(t *testing.T) {
 
 	body := &bytes.Buffer{}
 	writer := multipart.NewWriter(body)
-	writer.WriteField("kind", "plants")
+	_ = writer.WriteField("kind", "plants")
 	part, _ := writer.CreateFormFile("file", "bad.csv")
 	part.Write([]byte("name,species\n,Epipremnum"))
 	writer.Close()

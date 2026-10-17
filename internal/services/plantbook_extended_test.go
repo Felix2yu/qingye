@@ -152,7 +152,8 @@ func TestThrottledError_Codec(t *testing.T) {
 	if IsThrottled(nil) {
 		t.Error("IsThrottled(nil) should be false")
 	}
-	if IsThrottled(&ThrottledError{}) {
-		// Should be true even with zero retry
+	// 零重试次数的 ThrottledError 仍应被识别为限流
+	if !IsThrottled(&ThrottledError{}) {
+		t.Error("IsThrottled(&ThrottledError{}) should be true")
 	}
 }

@@ -20,7 +20,7 @@ func setupTestDB(t *testing.T) *gorm.DB {
 	if err != nil {
 		t.Fatal(err)
 	}
-	db.AutoMigrate(
+	_ = db.AutoMigrate(
 		&models.Plant{},
 		&models.Room{},
 		&models.Task{},
@@ -116,7 +116,7 @@ func TestPlantService_Delete_级联(t *testing.T) {
 	db.Create(&models.PhotoDiary{PlantID: p.ID, Image: "a.jpg", TakenAt: time.Now()})
 	db.Create(&models.CareLog{PlantID: p.ID, Type: "water", At: time.Now()})
 
-	svc.Delete(p.ID)
+	_ = svc.Delete(p.ID)
 
 	var count int64
 	db.Model(&models.Task{}).Where("plant_id = ?", p.ID).Count(&count)
@@ -133,8 +133,8 @@ func TestPlantService_List(t *testing.T) {
 	setupTestDB(t)
 	svc := NewPlantService()
 
-	svc.Create(&models.Plant{Name: "A"})
-	svc.Create(&models.Plant{Name: "B"})
+	_, _ = svc.Create(&models.Plant{Name: "A"})
+	_, _ = svc.Create(&models.Plant{Name: "B"})
 
 	list, err := svc.List(0)
 	if err != nil {
@@ -325,8 +325,8 @@ func TestTaskService_List_Today(t *testing.T) {
 	p := &models.Plant{Name: "X"}
 	db.Create(p)
 
-	svc.Create(&models.Task{PlantID: p.ID, Type: "water", IntervalDays: 7, NextDue: time.Now()})
-	svc.Create(&models.Task{PlantID: p.ID, Type: "fertilize", IntervalDays: 30, NextDue: time.Now().AddDate(0, 0, 30)})
+	_, _ = svc.Create(&models.Task{PlantID: p.ID, Type: "water", IntervalDays: 7, NextDue: time.Now()})
+	_, _ = svc.Create(&models.Task{PlantID: p.ID, Type: "fertilize", IntervalDays: 30, NextDue: time.Now().AddDate(0, 0, 30)})
 
 	// List
 	list, _ := svc.List("", false, 0)
@@ -456,7 +456,7 @@ func TestDiaryService_Page(t *testing.T) {
 		t.Errorf("page1 = %d, want 3", len(list))
 	}
 
-	list, total, _ = svc.Page(0, 2, 3)
+	list, _, _ = svc.Page(0, 2, 3)
 	if len(list) != 2 {
 		t.Errorf("page2 = %d, want 2", len(list))
 	}
@@ -568,11 +568,11 @@ func TestTaskService_Upcoming(t *testing.T) {
 	db.Create(p)
 
 	// 今天到期
-	svc.Create(&models.Task{PlantID: p.ID, Type: "water", IntervalDays: 7, NextDue: time.Now()})
+	_, _ = svc.Create(&models.Task{PlantID: p.ID, Type: "water", IntervalDays: 7, NextDue: time.Now()})
 	// 3天后到期
-	svc.Create(&models.Task{PlantID: p.ID, Type: "fertilize", IntervalDays: 30, NextDue: time.Now().AddDate(0, 0, 3)})
+	_, _ = svc.Create(&models.Task{PlantID: p.ID, Type: "fertilize", IntervalDays: 30, NextDue: time.Now().AddDate(0, 0, 3)})
 	// 20天后到期（在30天窗口内）
-	svc.Create(&models.Task{PlantID: p.ID, Type: "repot", IntervalDays: 90, NextDue: time.Now().AddDate(0, 0, 20)})
+	_, _ = svc.Create(&models.Task{PlantID: p.ID, Type: "repot", IntervalDays: 90, NextDue: time.Now().AddDate(0, 0, 20)})
 
 	// Upcoming(7) 包含今天 + 3天后的
 	upcoming, err := svc.Upcoming(7)
@@ -628,7 +628,7 @@ func TestTaskService_History(t *testing.T) {
 	task, _ := svc.Create(&models.Task{PlantID: p.ID, Type: "water", IntervalDays: 7})
 
 	// 完成一次
-	svc.Done(task.ID, "")
+	_, _ = svc.Done(task.ID, "")
 
 	// 获取历史
 	logs, err := svc.History(task.ID)
@@ -647,8 +647,8 @@ func TestTaskService_List_ByType(t *testing.T) {
 	p := &models.Plant{Name: "X"}
 	db.Create(p)
 
-	svc.Create(&models.Task{PlantID: p.ID, Type: "water", IntervalDays: 7, NextDue: time.Now()})
-	svc.Create(&models.Task{PlantID: p.ID, Type: "fertilize", IntervalDays: 30, NextDue: time.Now()})
+	_, _ = svc.Create(&models.Task{PlantID: p.ID, Type: "water", IntervalDays: 7, NextDue: time.Now()})
+	_, _ = svc.Create(&models.Task{PlantID: p.ID, Type: "fertilize", IntervalDays: 30, NextDue: time.Now()})
 
 	list, _ := svc.List("water", false, 0)
 	if len(list) != 1 {

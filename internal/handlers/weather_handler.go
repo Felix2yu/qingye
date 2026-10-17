@@ -62,7 +62,7 @@ func (h *WeatherHandler) Logs(c *gin.Context) {
 // Refresh POST /api/weather/refresh  手动触发一次策略调整
 func (h *WeatherHandler) Refresh(c *gin.Context) {
 	cfg := h.svc.LoadConfig()
-	if services.QWeatherKeyAvailable() == false {
+	if !services.QWeatherKeyAvailable() {
 		BadRequest(c, "未配置 QWEATHER_KEY，天气模块不可用")
 		return
 	}

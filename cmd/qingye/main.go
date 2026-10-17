@@ -66,7 +66,7 @@ func main() {
 	r.MaxMultipartMemory = 32 << 20
 	router.Setup(r, cfg)
 
-	log.Printf("青野后端已启动: http://localhost:%s", cfg.Port)
+	log.Printf("青野后端已启动 (v%s): http://localhost:%s", version, cfg.Port)
 	if err := r.Run(":" + cfg.Port); err != nil {
 		log.Fatalf("服务启动失败: %v", err)
 	}

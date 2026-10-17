@@ -278,7 +278,7 @@ var plantAliases = []PlantAlias{
 	{"角堇", "viola cornuta"},
 	{"紫罗兰", "matthiola incana"},
 	{"虞美人", "papaver rhoeas"},
-	{"花菱草", "eschscholzia californica"},
+	{"花菱草", "eschscholzia californica"}, //nolint:misspell // californica 是植物学种加词，正确拼写就是如此
 	{"石竹", "dianthus chinensis"},
 	{"康乃馨", "dianthus caryophyllus"},
 	{"满天星", "gypsophila paniculata"},
