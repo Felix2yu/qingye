@@ -2,11 +2,13 @@
 web/node_modules
 web/.svelte-kit
 web/build
-# 后端本地数据/上传/编译产物
-server/data
-server/uploads
-server/qingye
-server/*.db
+# 后端本地数据/上传/编译产物（server/ 已回根，去掉前缀）
+data
+uploads
+qingye
+*.db
+
+# 装配式镜像：bin/ 与 dist/ 是 Dockerfile 的 COPY 源，绝不能排除
 # 环境文件
 **/.env
 **/.env.local

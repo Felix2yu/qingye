@@ -16,22 +16,22 @@ help: ## 查看可用命令
 	@echo "  make build-web       构建前端生产包"
 
 install-server:
-	cd server && go mod download
+	go mod download
 
 install-web:
-	cd web && npm install
+	cd web && pnpm install --frozen-lockfile
 
 run-server:
-	cd server && PORT=$(SERVER_PORT) go run .
+	PORT=$(SERVER_PORT) go run ./cmd/qingye
 
 run-web:
-	cd web && npm run dev -- --port $(WEB_PORT)
+	cd web && pnpm run dev -- --port $(WEB_PORT)
 
 build-web:
-	cd web && npm run build
+	cd web && pnpm run build
 
 stop:
-	@-pkill -f "exe/server" 2>/dev/null; pkill -f "qingye/server" 2>/dev/null; pkill -f "vite" 2>/dev/null; echo "已尝试停止相关进程"
+	@-pkill -f "exe/qingye" 2>/dev/null; pkill -f "cmd/qingye" 2>/dev/null; pkill -f "vite" 2>/dev/null; echo "已尝试停止相关进程"
 
 seed:
-	@echo "种子数据在后端启动时自动写入；如需重置，删除 server/data/qingye.db 后重启即可"
+	@echo "种子数据在后端启动时自动写入；如需重置，删除 data/qingye.db 后重启即可"

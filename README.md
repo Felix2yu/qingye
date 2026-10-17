@@ -21,8 +21,9 @@ qingye/
 ├── .github/
 │   ├── workflows/docker.yml  # 多架构镜像构建 + 推送 GHCR
 │   └── dependabot.yml        # 每日依赖更新检测
-├── server/                # Go 后端（Gin + GORM + SQLite）
-│   ├── main.go            # 入口：配置 / AutoMigrate / 路由 / 启动 / 天气轮询
+├── cmd/qingye/            # 入口：配置 / AutoMigrate / 路由 / 启动 / 天气轮询
+│   └── main.go
+├── internal/              # Go 后端私有业务包（Gin + GORM + SQLite）
 │   ├── config/            # 配置加载（端口 / 数据库 / 上传目录 / CORS / WebDir）
 │   ├── models/            # GORM 实体（含天气策略 WeatherConfig / WeatherLog）
 │   ├── repositories/      # 数据访问层
@@ -31,9 +32,10 @@ qingye/
 │   │   └── plantbook.go    # 在线植物资料库客户端
 │   ├── handlers/          # REST 路由处理 + 统一响应
 │   ├── router/            # 路由注册 + CORS / 日志 / Recovery + 静态站点托管
-│   ├── seed/              # 资料库示例 + 初始设置 + 演示数据
-│   ├── uploads/           # 本地照片存储
-│   └── .env.example
+│   └── seed/              # 资料库示例 + 初始设置 + 演示数据
+├── uploads/               # 本地照片存储（gitignore）
+├── data/                  # 本地 SQLite 数据（gitignore）
+└── .env.example
 └── web/                   # SvelteKit 前端（静态 SPA）
     ├── src/lib/           # api 封装 / 类型 / stores / 组件
     ├── src/routes/        # 页面路由（含 +layout.ts 关闭 SSR）
@@ -111,7 +113,7 @@ cd server && PORT=8081 CGO_ENABLED=1 go build -o qingye .
 
 - **重复任务按需计算**：任务以「规则 + 上次完成时间」存储，查询时计算下一次到期，避免海量任务行；仅完成/推迟动作写入 `task_logs`。
 - **工作日过滤**：`user_settings.workdays` 以 `1-7`（周一至周日）记录，今日任务仅在「今天为工作日且 next_due ≤ 今天」时展示。
-- **照片存储**：SQLite 仅存元数据（路径/说明/时间），图片文件存本地 `server/uploads/`。
+- **照片存储**：SQLite 仅存元数据（路径/说明/时间），图片文件存本地 `uploads/`。
 - **事务保证**：「完成任务 + 写日志 + 更新 next_due」在同一事务内完成。
 - **统一响应**：所有接口返回 `{ code, message, data }`，`code=0` 表示成功。
 - **前端静态托管**：生产镜像内前端为静态 SPA，由后端 `WEB_DIR` 指向并同源托管；未知非 API 路由回退 `index.html`（SPA 前端路由）。
@@ -164,7 +166,7 @@ cd server && PORT=8081 CGO_ENABLED=1 go build -o qingye .
 
 ## 环境变量
 
-**后端** `server/.env`（参考 `server/.env.example`）：
+**后端** 仓库根 `.env`（参考 `.env.example`；后端已从 `server/` 回根，工作目录即仓库根）：
 
 ```
 PORT=8081
@@ -226,7 +228,7 @@ VITE_API_BASE=
 ### 两种用法
 
 1. **录入时在线匹配**（懒加载）：添加植物时填写名称 → 点「在线查找」→ 从候选列表选一条 → 自动带回中文指南并落库。
-2. **批量同步热门植物**（离线预置）：设置页「植物资料库同步」→ 点「同步热门植物」，把内置 500+ 条映射表覆盖的常见室内/露台/蔬果植物的中文指南一次性拉取沉淀到本地（清单见 `server/services/plant_alias.go` 的 `plantAliases`）。全表同步耗时数分钟。
+2. **批量同步热门植物**（离线预置）：设置页「植物资料库同步」→ 点「同步热门植物」，把内置 500+ 条映射表覆盖的常见室内/露台/蔬果植物的中文指南一次性拉取沉淀到本地（清单见 `internal/services/plant_alias.go` 的 `plantAliases`）。全表同步耗时数分钟。
 
 > 未配置 Plantbook 凭据时，在线功能优雅降级为「仅本地资料库」，不影响其他功能。
 
@@ -305,4 +307,4 @@ docker run -d --name qingye \
 
 ## 重置演示数据
 
-删除 `server/data/qingye.db` 并重启后端即可重新生成全部种子与演示数据（Docker 部署则删除 `qingye-data` 卷后重建容器）。
+删除 `data/qingye.db` 并重启后端即可重新生成全部种子与演示数据（Docker 部署则删除 `qingye-data` 卷后重建容器）。
