@@ -7,8 +7,10 @@ web/build/
 web/.svelte-kit/
 
 # ---- 运行时数据（不要入库） ----
-server/data/
-server/uploads/
+# 全部加 / 锚定：无斜杠的规则会匹配任意层级的同名目录
+# （例如裸写 qingye 会命中 cmd/qingye/，把整个入口包判成忽略）
+/data/
+/uploads/
 *.db
 
 # ---- 环境变量 / 密钥 ----
@@ -18,9 +20,13 @@ server/uploads/
 **/.env.local
 
 # ---- 编译产物 ----
-/server/qingye
-qingye
+/qingye
+/bin/
+/dist/
 *.exe
+
+# ---- 迁移残留（server/ 已回根，仅剩未跟踪的本地数据，待人工确认后删除） ----
+/server/
 
 # ---- 系统 / 编辑器 ----
 .DS_Store
@@ -30,3 +36,6 @@ qingye
 
 # ---- 内部工具数据（不上传） ----
 .codebuddy/
+
+# ---- WorkBuddy 工作区元数据（本地会话记忆，不入库） ----
+.workbuddy/

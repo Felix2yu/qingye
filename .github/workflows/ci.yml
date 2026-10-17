@@ -23,7 +23,7 @@ jobs:
     secrets:
       CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
     with:
-      go-dir: server
+      go-dir: .
       test-packages: ./...
       web-dir: web
       # web 的 build 脚本只有 vite build，不做类型检查；不显式跑 check 的话
@@ -37,7 +37,10 @@ jobs:
       packages: write
     uses: Felix2yu/.github/.github/workflows/reusable-image.yml@v1
     with:
-      go-dir: server
+      go-dir: .
+      # 入口已从 server/main.go 迁到 cmd/qingye/：main-package 的默认值是 "."，
+      # 不显式传会在 Build binary 步骤失败（本地 go build 发现不了）
+      main-package: ./cmd/qingye
       binary-name: qingye
       image-name: ghcr.io/felix2yu/qingye
       # 纯 Go SQLite 驱动（glebarez/sqlite），无需 CGO，静态编译即可
