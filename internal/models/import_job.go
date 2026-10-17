@@ -28,9 +28,9 @@ type ImportPreview struct {
 
 // ImportConfirmRequest 确认导入请求
 type ImportConfirmRequest struct {
-	Kind     string   `json:"kind"`     // plants | tasks | template
-	Content  string   `json:"content"`  // 原始 CSV 文本（plants/tasks 复用解析）
-	Accepted []int    `json:"accepted"` // 确认导入的行号（仅这些行落库）；为空表示全部有效行
+	Kind     string `json:"kind"`     // plants | tasks | template
+	Content  string `json:"content"`  // 原始 CSV 文本（plants/tasks 复用解析）
+	Accepted []int  `json:"accepted"` // 确认导入的行号（仅这些行落库）；为空表示全部有效行
 	// 模板复制专用
 	SourceID  uint   `json:"sourceId"`  // 模板来源植物 ID
 	TargetIDs []uint `json:"targetIds"` // 目标植物 ID 列表

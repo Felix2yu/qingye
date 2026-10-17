@@ -76,11 +76,11 @@ func TestPlantbookClient_Search(t *testing.T) {
 			_ = json.NewEncoder(w).Encode(map[string]any{
 				"count": 1,
 				"results": []map[string]any{{
-					"pid":           "monstera_deliciosa",
-					"alias":         "Monstera",
-					"common_names":  []map[string]any{{"name": "龟背竹", "language_code": "zh"}},
-					"image_url":     "http://x/i.png",
-					"link":          "http://x",
+					"pid":          "monstera_deliciosa",
+					"alias":        "Monstera",
+					"common_names": []map[string]any{{"name": "龟背竹", "language_code": "zh"}},
+					"image_url":    "http://x/i.png",
+					"link":         "http://x",
 				}},
 			})
 			return
@@ -136,22 +136,22 @@ func TestPlantbookClient_Detail(t *testing.T) {
 		}
 		if r.URL.Path == "/plant/detail/monstera_deliciosa/" {
 			detail := map[string]any{
-				"pid":          "monstera_deliciosa",
-				"display_pid":  "Monstera deliciosa",
-				"alias":        "Monstera",
-				"image_url":    "http://x/i.png",
-				"max_temp":     30,
-				"min_temp":     15,
-				"light":        "明亮散射光",
-				"watering":     "保持湿润",
-				"soil":         "腐殖土",
+				"pid":           "monstera_deliciosa",
+				"display_pid":   "Monstera deliciosa",
+				"alias":         "Monstera",
+				"image_url":     "http://x/i.png",
+				"max_temp":      30,
+				"min_temp":      15,
+				"light":         "明亮散射光",
+				"watering":      "保持湿润",
+				"soil":          "腐殖土",
 				"fertilization": "每月一次",
-				"pruning":      "修剪枯叶",
+				"pruning":       "修剪枯叶",
 				"care": map[string]any{
 					"light":         "明亮",
 					"watering":      "多浇水",
 					"soil":          "泥炭土",
-					"fertilization":  "春夏季",
+					"fertilization": "春夏季",
 					"pruning":       "随时",
 				},
 			}
@@ -202,10 +202,10 @@ func TestPlantbookClient_Detail_UnauthorizedRetry(t *testing.T) {
 			return
 		}
 		_ = json.NewEncoder(w).Encode(map[string]any{
-			"pid":       "x",
-			"alias":     "X",
-			"max_temp":  25,
-			"min_temp":  10,
+			"pid":      "x",
+			"alias":    "X",
+			"max_temp": 25,
+			"min_temp": 10,
 		})
 	})
 	lib, err := c.Detail("x")

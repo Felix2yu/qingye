@@ -32,14 +32,14 @@ func TestNotifyService_WeatherAlert_RealSend(t *testing.T) {
 
 func TestTaskTypeEmoji_All(t *testing.T) {
 	cases := map[string]string{
-		TaskTypeWater:      "💧",
-		TaskTypeFertilize:  "🌱",
-		TaskTypeMist:       "🌫️",
-		TaskTypeRepot:      "🪴",
-		TaskTypePrune:      "✂️",
-		TaskTypeClean:      "🧹",
-		TaskTypePesticide:  "🐛",
-		TaskTypeOther:      "✨",
+		TaskTypeWater:     "💧",
+		TaskTypeFertilize: "🌱",
+		TaskTypeMist:      "🌫️",
+		TaskTypeRepot:     "🪴",
+		TaskTypePrune:     "✂️",
+		TaskTypeClean:     "🧹",
+		TaskTypePesticide: "🐛",
+		TaskTypeOther:     "✨",
 	}
 	for typ, want := range cases {
 		if got := taskTypeEmoji(typ); got != want {

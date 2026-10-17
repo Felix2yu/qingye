@@ -96,14 +96,14 @@ func (s *ImportService) PreviewPlants(content string) (*models.ImportPreview, er
 		}
 		room := cell(row, roomIdx)
 		rowData := map[string]any{
-			"name":        name,
-			"species":     cell(row, speciesIdx),
-			"room":        room,
-			"note":        cell(row, noteIdx),
-			"location":    cell(row, locationIdx),
+			"name":         name,
+			"species":      cell(row, speciesIdx),
+			"room":         room,
+			"note":         cell(row, noteIdx),
+			"location":     cell(row, locationIdx),
 			"acquiredDate": cell(row, acquiredIdx),
-			"lightReq":    cell(row, lightIdx),
-			"attributes":  cell(row, attrIdx),
+			"lightReq":     cell(row, lightIdx),
+			"attributes":   cell(row, attrIdx),
 		}
 		status := models.ImportOK
 		reason := ""
@@ -153,12 +153,12 @@ func (s *ImportService) ConfirmPlants(preview *models.ImportPreview, accepted []
 			roomID = room.ID
 		}
 		plant := &models.Plant{
-			Name:    name,
-			Species: optStr(m["species"]),
-			RoomID:  roomID,
-			Note:    optStr(m["note"]),
-			Location: optStr(m["location"]),
-			LightReq: optStr(m["lightReq"]),
+			Name:       name,
+			Species:    optStr(m["species"]),
+			RoomID:     roomID,
+			Note:       optStr(m["note"]),
+			Location:   optStr(m["location"]),
+			LightReq:   optStr(m["lightReq"]),
 			Attributes: optStr(m["attributes"]),
 		}
 		if ad := optStr(m["acquiredDate"]); ad != "" {
@@ -245,10 +245,10 @@ func (s *ImportService) PreviewTasks(content string) (*models.ImportPreview, err
 				})
 				preview.Invalid++
 				continue
-				}
-				}
+			}
+		}
 
-				p, found := plantByName[strings.ToLower(plantName)]
+		p, found := plantByName[strings.ToLower(plantName)]
 		status := models.ImportOK
 		reason := ""
 		if !found {

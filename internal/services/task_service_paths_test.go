@@ -15,13 +15,13 @@ func newTaskPlant(t *testing.T) (*models.Plant, *models.Task) {
 		t.Fatalf("create plant: %v", err)
 	}
 	tk := &models.Task{
-		PlantID:      p.ID,
-		Type:         TaskTypeWater,
-		Title:        "浇水",
-		IntervalDays: 7,
+		PlantID:          p.ID,
+		Type:             TaskTypeWater,
+		Title:            "浇水",
+		IntervalDays:     7,
 		BaseIntervalDays: 7,
-		NextDue:      time.Now().Add(24 * time.Hour),
-		Active:       true,
+		NextDue:          time.Now().Add(24 * time.Hour),
+		Active:           true,
 	}
 	if err := repositories.NewTaskRepo().Create(tk); err != nil {
 		t.Fatalf("create task: %v", err)

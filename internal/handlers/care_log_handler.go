@@ -11,8 +11,8 @@ import (
 
 // CareLogHandler 统一养护时间线
 type CareLogHandler struct {
-	listSvc  *services.CareLogService
-	taskSvc  *services.TaskService
+	listSvc *services.CareLogService
+	taskSvc *services.TaskService
 }
 
 func NewCareLogHandler() *CareLogHandler {

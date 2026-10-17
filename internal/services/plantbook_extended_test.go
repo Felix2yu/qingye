@@ -7,9 +7,9 @@ import (
 
 func TestToCandidate(t *testing.T) {
 	item := pbSearchItem{
-		PID:       "monstera deliciosa",
-		Alias:     "Monstera deliciosa",
-		ImageURL:  "https://example.com/img.jpg",
+		PID:      "monstera deliciosa",
+		Alias:    "Monstera deliciosa",
+		ImageURL: "https://example.com/img.jpg",
 		CommonNames: []pbCommonName{
 			{Name: "龟背竹"},
 			{Name: "Monstera"},

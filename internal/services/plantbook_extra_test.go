@@ -6,10 +6,10 @@ import (
 
 func TestCareInfo(t *testing.T) {
 	d := &pbDetail{
-		Light:      "明亮散射光",
-		Sunlight:   "sun",
-		Watering:   "见干见湿",
-		SoilText:   "疏松肥沃",
+		Light:    "明亮散射光",
+		Sunlight: "sun",
+		Watering: "见干见湿",
+		SoilText: "疏松肥沃",
 		Care: &pbCare{
 			Light:    "Care光",
 			Watering: "Care水",
