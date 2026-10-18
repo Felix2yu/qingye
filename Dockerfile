@@ -3,23 +3,25 @@
 # 编译期依赖（node_modules、Go 工具链）全部留在 CI，不进镜像。
 # SQLite 为纯 Go 驱动（glebarez/sqlite），无需 gcc/musl-dev。
 # 前端产物不打进二进制，运行时由 WEB_DIR 指向 /app/web。
-
-FROM alpine:3.24
+#
+# 基镜 ghcr.io/felix2yu/base:alpine-3.24 提供 ca-certificates、tzdata、su-exec
+# 与 PUID/PGID 降权入口（/app/data 与 /app/uploads 两个数据目录都要 chown）。
+FROM ghcr.io/felix2yu/base:alpine-3.24
 
 WORKDIR /app
 
-RUN apk add --no-cache ca-certificates tzdata && \
-    mkdir -p /app/data /app/uploads /app/web
-
 COPY --chmod=755 bin/qingye /app/qingye
 COPY dist /app/web
+
+RUN mkdir -p /app/data /app/uploads
 
 ENV PORT=8081 \
     DB_PATH=/app/data/qingye.db \
     UPLOAD_DIR=/app/uploads \
     WEB_DIR=/app/web \
     CORS_ORIGINS=* \
-    GIN_MODE=release
+    GIN_MODE=release \
+    APP_DATA_DIR="/app/data /app/uploads"
 
 EXPOSE 8081
 VOLUME ["/app/data", "/app/uploads"]
@@ -27,4 +29,4 @@ VOLUME ["/app/data", "/app/uploads"]
 HEALTHCHECK --interval=30s --timeout=3s --start-period=10s --retries=3 \
     CMD wget -qO- http://localhost:8081/healthz || exit 1
 
-ENTRYPOINT ["/app/qingye"]
+CMD ["/app/qingye"]
