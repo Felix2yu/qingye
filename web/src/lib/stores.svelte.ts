@@ -9,35 +9,35 @@ let _settings = $state<UserSetting | null>(null);
 let _toast = $state<ToastData>(null);
 
 export const settings = {
-	get current(): UserSetting | null {
-		return _settings;
-	},
-	set(v: UserSetting | null) {
-		_settings = v;
-	}
+  get current(): UserSetting | null {
+    return _settings;
+  },
+  set(v: UserSetting | null) {
+    _settings = v;
+  }
 };
 
 export const toast = {
-	get current(): ToastData {
-		return _toast;
-	},
-	set(v: ToastData) {
-		_toast = v;
-	}
+  get current(): ToastData {
+    return _toast;
+  },
+  set(v: ToastData) {
+    _toast = v;
+  }
 };
 
 // 全局设置（工作日、偏好），供多个页面读取
 export async function loadSettings() {
-	if (!browser) return;
-	try {
-		settings.set(await api.getSettings());
-	} catch {
-		/* 忽略加载失败 */
-	}
+  if (!browser) return;
+  try {
+    settings.set(await api.getSettings());
+  } catch {
+    /* 忽略加载失败 */
+  }
 }
 
 // 简单 toast 提示
 export function showToast(text: string, type: 'ok' | 'err' | 'info' = 'ok') {
-	toast.set({ id: Date.now(), text, type });
-	setTimeout(() => toast.set(null), 2400);
+  toast.set({ id: Date.now(), text, type });
+  setTimeout(() => toast.set(null), 2400);
 }
