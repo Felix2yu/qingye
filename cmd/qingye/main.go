@@ -19,6 +19,17 @@ import (
 )
 
 func main() {
+	// 外部备份工具（docker-db-auto-backup 等）经 docker exec 调用 `/app/qingye backup`，
+	// 在进程内导出一致快照写到 stdout。必须放在最前面：导出进程不初始化存储、
+	// 不跑迁移、不写种子、不起后台任务，只做这一件事——若它先跑了迁移再导出，
+	// 一次备份就可能改变库结构，以 root 跑出来的迁移还会留下属主错误的文件。
+	if len(os.Args) > 1 && os.Args[1] == "backup" {
+		if err := runBackup(os.Args[2:], os.Stdout); err != nil {
+			log.Fatalf("备份导出失败: %v", err)
+		}
+		return
+	}
+
 	cfg := config.Load()
 
 	// 确保数据与上传目录存在

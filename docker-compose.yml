@@ -14,6 +14,15 @@ services:
       CORS_ORIGINS: "*"
       GIN_MODE: "release"
       MAX_UPLOAD_MB: "10"
+      # 外部备份工具（docker-db-auto-backup）经 docker exec 调用的自导出命令：
+      # `/app/qingye backup` 把 VACUUM INTO 的 SQLite 一致性快照写到 stdout，只读、不跑迁移。
+      # (a) 这一条必须显式声明：二进制装在 /app 而 /app 不在 PATH 上，命令必须写成绝对路径，
+      #     裸名经 sh -c 解析会 exit 127。
+      # (b) 想连带照片日记的图片一起备份，把命令改成 "/app/qingye backup --format zip"，
+      #     并同步声明 BACKUP_SQLITE_EXT: "zip"，否则工具会按 SQLite 魔数校验 zip 产物，
+      #     本轮备份直接判失败（不静默存坏备份）。
+      # (c) 导出身份沿用基镜烘入的 PUID/PGID（与数据属主一致），无需 BACKUP_SQLITE_USER。
+      BACKUP_SQLITE_CMD: "/app/qingye backup"
       # 可选：Plantbook 在线植物库 OAuth2 凭据（open.plantbook.io 注册获取，留空则禁用在线匹配）
       PLANTBOOK_CLIENT_ID: "${PLANTBOOK_CLIENT_ID:-}"
       PLANTBOOK_CLIENT_SECRET: "${PLANTBOOK_CLIENT_SECRET:-}"

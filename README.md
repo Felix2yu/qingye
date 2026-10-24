@@ -298,6 +298,27 @@ docker run -d --name qingye \
 
 ---
 
+## 数据备份与恢复
+
+内置 `backup` 子命令在进程内导出事务级一致快照（`VACUUM INTO`），供 [`docker-db-auto-backup`](https://github.com/Felix2yu/docker-db-auto-backup) 经 `docker exec` 定时调取；compose 已声明 `BACKUP_SQLITE_CMD: "/app/qingye backup"`，装好备份工具即自动接入。手工备份：
+
+```bash
+# SQLite 一致性快照（默认格式，工具按此校验）
+docker exec qingye /app/qingye backup > qingye.db
+
+# 快照 + 全部照片日记图片（此时工具侧要同步声明 BACKUP_SQLITE_EXT: zip）
+docker exec qingye /app/qingye backup --format zip > qingye.zip
+```
+
+命令只读打开数据库，不跑迁移、不建目录，库文件缺失时直接报错退出；日志走 stderr，stdout 只承载备份数据。
+
+**恢复**（先停容器或至少停止写入）：
+
+- `db` 快照：覆盖 `/app/data/qingye.db`、修好属主（默认 `1000:1000`）后重启即可。快照是 delete 日志模式，应用启动会按自身逻辑切回 WAL，不要手动转换。
+- `zip` 包：`qingye.db` 放回 `/app/data/`，`uploads/` 下的照片按相对路径放回 `/app/uploads/`，修好属主后重启。
+
+---
+
 ## CI / 自动化
 
 - **镜像构建**：`.github/workflows/docker.yml` 在 push 到 `main` 或打 `v*` tag 时，用原生架构 runner 矩阵（`ubuntu-latest`=amd64、`ubuntu-24.04-arm`=arm64，不用 qemu 模拟）分别构建，再合并为 `ghcr.io/felix2yu/qingye:latest` 与 `:sha`。`pull_request`（含 Dependabot）只构建验证、不推送镜像。
